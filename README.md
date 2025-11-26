@@ -91,20 +91,6 @@ LIMIT 50, 100"""
     sql_stmt = Sql(sql)
 ```
 
-Usage
-Parsing and AST
-
-The parse() method is your primary tool for deconstructing SQL. It returns a comprehensive JSON object representing the query's Abstract Syntax Tree, which you can use for custom analysis, validation, or transformation.
-
-Formatting
-
-Use the format() method to automatically standardize and beautify your SQL code, improving readability and maintainability.
-
-Table Lineage
-
-The get_table_lineage() method analyzes a SQL statement and returns a graph of source and target tables. This is invaluable for data governance, impact analysis, and understanding data flow in ETL/ELT processes.
-
 Contributing
-
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest new features.
 
