@@ -1,13 +1,13 @@
-SQL Parser Library
+SQL Parser Library:
 A high-performance, cross-platform SQL parsing library, designed to handle the most complex SQL queries with ease.
 
-Overview
+Overview:
 
 This library provides a robust set of tools for parsing and analyzing SQL statements. Built with a core engine in C++17 for maximum performance, it offers native Python bindings, making it the ideal choice for data-intensive applications where speed and accuracy are critical.
 
 It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
 
-Features
+Features:
 
 Fast SQL Parsing: Leverages a high-performance C++17 core to parse SQL statements rapidly.
 
