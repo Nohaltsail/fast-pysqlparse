@@ -36,9 +36,10 @@ Python API: A clean and intuitive Python library built around the high-speed nat
 Performance:
 This library is engineered for speed. By moving the computationally intensive parsing work to a native C++ layer, it significantly outperforms pure-Python parsing libraries, especially when dealing with large, complex SQL scripts.
 
-Installation
+Installation:
 
-From Source
+From Source:
+
     Clone the repository: git clone https://github/Nohaltsail/fast-pysqlparse.git
     Build：python setup.py bdist_wheel
     Install(if you build with Python3.10): cd dist && pip install pysqlparse-0.6.3-cp310-cp310-win_amd64.whl
@@ -92,6 +93,6 @@ LIMIT 50, 100"""
     sql_stmt = Sql(sql)
 ```
 
-Contributing
+Contributing:
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest new features.
 
