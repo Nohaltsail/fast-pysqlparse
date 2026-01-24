@@ -11,13 +11,12 @@ Features:
 
 Fast SQL Parsing: Leverages a high-performance C++17 core to parse SQL statements rapidly.
 
-Cross-Platform: Compiled into native extensions (.pyd for Windows, .so for Linux/macOS).
-
+Cross-Platform: Compiled into native extensions (.pyd for Windows, .so for Linux).
 Comprehensive SQL Support: Supports a wide range of SQL statements, including:
 
         SELECT (with complex JOIN, WHERE, GROUP BY, sub query, etc.)
         INSERT
-        Data Definition Language (CREATE, ALTER, DROP)
+        Data Definition Language (CREATE)
         VIEW
         DELETE
         UPDATE
