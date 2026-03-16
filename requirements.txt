@@ -1,3 +1,2 @@
-pysqlparse~=0.4.3
 setuptools>=70.1
 wheel~=0.45.1
