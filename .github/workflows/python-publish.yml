@@ -1,70 +1,102 @@
-# This workflow will upload a Python Package to PyPI when a release is created
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Upload Python Package
+# .github/workflows/publish-to-pypi.yml
+name: Publish to PyPI
 
 on:
   release:
     types: [published]
-
-permissions:
-  contents: read
+  workflow_dispatch:
 
 jobs:
-  release-build:
-    runs-on: ubuntu-latest
 
+  build-wheels:
+    name: Build wheels for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win_amd64
+          - os: ubuntu-latest
+            platform: manylinux_x86_64
+    
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-
-      - name: Build release distributions
+      
+      - name: Install dependencies
         run: |
-          # NOTE: put your own distribution build steps here.
+          python -m pip install --upgrade pip
           python -m pip install build
-          python -m build
-
-      - name: Upload distributions
+      
+      - name: Build wheel
+        run: python -m build --wheel
+      
+      - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-dists
-          path: dist/
+          name: wheel-${{ matrix.os }}
+          path: dist/*.whl
 
-  pypi-publish:
+  build-sdist:
+    name: Build source distribution
     runs-on: ubuntu-latest
-    needs:
-      - release-build
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+      
+      - name: Build sdist
+        run: python -m build --sdist
+      
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
 
-    # Dedicated environments with protections for publishing are strongly recommended.
-    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
+  publish-to-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-wheels, build-sdist]
+    
+    permissions:
+      id-token: write
+    
     environment:
       name: pypi
-      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
-      # url: https://pypi.org/p/YOURPROJECT
-      #
-      # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
-      # ALTERNATIVE: exactly, uncomment the following line instead:
-      # url: https://pypi.org/project/YOURPROJECT/${{ github.event.release.name }}
-
+      url: https://pypi.org/project/fast-pysqlparse/
+    
     steps:
-      - name: Retrieve release distributions
+      - name: Download all wheels
         uses: actions/download-artifact@v4
         with:
-          name: release-dists
+          pattern: wheel-*
           path: dist/
-
-      - name: Publish release distributions to PyPI
+          merge-multiple: true
+      
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+      
+      - name: List distributions
+        run: ls -la dist/
+      
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
