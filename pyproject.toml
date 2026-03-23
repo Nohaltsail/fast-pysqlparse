@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fast-pysqlparse"
-version = "0.6.6"
+version = "0.6.7"
 description = "A fast SQL parser with Python wrapper and C++ core"
 readme = "README.md"
 authors = [
