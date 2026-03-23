@@ -32,7 +32,7 @@ Repository = "https://github.com/Nohaltsail/fast-pysqlparse.git"
 Issues = "https://github.com/Nohaltsail/fast-pysqlparse/issues"
 
 [tool.setuptools]
-packages = ["fastsqlparse"]
+packages = {find = {include = ["fastsqlparse", "fastsqlparse.*"]}}
 
 [tool.setuptools.package-data]
 fastsqlparse = ["*.so", "*.pyd", "**/*.so", "**/*.pyd"]
