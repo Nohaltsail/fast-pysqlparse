@@ -50,7 +50,7 @@ jobs:
           name: release-dists
           path: dist/
 
-  # 发布到 PyPI（仅当手动选择 pypi 或触发 Release 时）
+  # publish to PyPI（when manual or  update release）
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest

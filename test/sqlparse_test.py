@@ -1,4 +1,4 @@
-from pysqlparse import sql
+from fast_sqlparse import sql
 
 statement = """
 SELECT * FROM table1

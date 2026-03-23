@@ -44,8 +44,9 @@ From Source:
     Install(if you build with Python3.10): cd dist && pip install pysqlparse-0.6.3-cp310-cp310-win_amd64.whl
 
 Quick Start
+
 ```python
-from pysqlparse import Sql
+from fast_sqlparse import Sql
 import time
 
 if __name__ == '__main__':
