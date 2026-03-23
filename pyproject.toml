@@ -35,4 +35,4 @@ Issues = "https://github.com/Nohaltsail/fast-pysqlparse/issues"
 packages = ["fastsqlparse"]
 
 [tool.setuptools.package-data]
-pysqlparse = ["*.so", "*.pyd", "**/*.so", "**/*.pyd"]
+fastsqlparse = ["*.so", "*.pyd", "**/*.so", "**/*.pyd"]
