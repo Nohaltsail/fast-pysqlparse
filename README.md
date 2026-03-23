@@ -46,7 +46,7 @@ From Source:
 Quick Start
 
 ```python
-from fast_sqlparse import Sql
+from fastsqlparse import Sql
 import time
 
 if __name__ == '__main__':

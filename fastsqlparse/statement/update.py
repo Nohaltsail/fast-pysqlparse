@@ -1,6 +1,6 @@
 from typing import Tuple, List, Any
 
-import fast_sqlparse.pysqlparser as parser
+import fastsqlparse.pysqlparser as parser
 
 
 class Update(object):

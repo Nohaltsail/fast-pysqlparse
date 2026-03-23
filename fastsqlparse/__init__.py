@@ -1,14 +1,14 @@
 """
-fast-fast_sqlparse
+fast-fastsqlparse
 Author:Cynohalt 2972906133@qq.com
 This module is used for parsing SQL statements.
 You should use UTF8-encoding statements string or sql file.
 """
 
-from fast_sqlparse.statement import *
-from fast_sqlparse.sql import Sql
-from fast_sqlparse.pysqlparser import AbstractStatement
-from fast_sqlparse.pysqlparser import (
+from fastsqlparse.statement import *
+from fastsqlparse.sql import Sql
+from fastsqlparse.pysqlparser import AbstractStatement
+from fastsqlparse.pysqlparser import (
     view,
     delete,
     query,

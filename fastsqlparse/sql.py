@@ -1,7 +1,7 @@
 import os.path
 
-from fast_sqlparse.conf import *
-from fast_sqlparse import pysqlparser
+from fastsqlparse.conf import *
+from fastsqlparse import pysqlparser
 
 
 class Sql(pysqlparser.Sql):

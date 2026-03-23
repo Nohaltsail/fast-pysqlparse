@@ -1,5 +1,5 @@
 from typing import List, Any, Tuple
-from fast_sqlparse import pysqlparser as parser
+from fastsqlparse import pysqlparser as parser
 
 
 class Query(object):

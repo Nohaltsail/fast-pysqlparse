@@ -1,4 +1,4 @@
-from fast_sqlparse import sql
+from fastsqlparse import sql
 
 statement = """
 SELECT * FROM table1

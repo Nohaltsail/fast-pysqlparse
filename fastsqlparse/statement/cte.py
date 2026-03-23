@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from fast_sqlparse.conf import DEFAULT_FORMAT_INDENT
-import fast_sqlparse.pysqlparser as parser
+from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
+import fastsqlparse.pysqlparser as parser
 
 
 class Cte(object):

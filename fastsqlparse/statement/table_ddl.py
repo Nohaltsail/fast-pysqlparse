@@ -1,4 +1,4 @@
-import fast_sqlparse.pysqlparser as parser
+import fastsqlparse.pysqlparser as parser
 
 
 class TableDDL(object):
