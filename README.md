@@ -48,6 +48,10 @@ From Source:
 
 Quick Start
 
+```shell
+pip install fast-pysqlparse
+```
+
 ```python
 from fastsqlparse import Sql
 import time
