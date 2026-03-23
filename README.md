@@ -38,10 +38,13 @@ This library is engineered for speed. By moving the computationally intensive pa
 Installation:
 
 From Source:
-
-    Clone the repository: git clone https://github/Nohaltsail/fast-pysqlparse.git
-    Build：python setup.py bdist_wheel
-    Install(if you build with Python3.10): cd dist && pip install pysqlparse-0.6.3-cp310-cp310-win_amd64.whl
+    
+    git clone https://github.com/Nohaltsail/fast-pysqlparse.git
+    cd fast-pysqlparse
+    pip install build
+    python -m build
+    cd dist
+    pip install fast_pysqlparse-*.whl
 
 Quick Start
 
