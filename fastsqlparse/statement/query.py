@@ -141,7 +141,7 @@ class Query(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, str]]:
+    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
         """
         Perform lexical analysis of a QUERY clause statement.
 

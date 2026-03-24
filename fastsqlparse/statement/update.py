@@ -70,7 +70,7 @@ class Update(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, str]]:
+    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
         """
         Perform lexical analysis of an UPDATE statement without full parsing.
 

@@ -98,7 +98,7 @@ class View(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, str]]:
+    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
         """
         Class method for raw SQL tokenization without full parsing.
 
