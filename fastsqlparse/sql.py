@@ -31,12 +31,12 @@ class Sql(pysqlparser.Sql):
         if not sql_statements and not file:
             raise Exception("empty SQL statement or file")
         elif not file:
-            super(Sql, self).__init__(sql_statements, False, pure, name)
+            super(Sql, self).__init__(sql_statements, pure, False, "", name)
         elif not sql_statements:
             super(Sql, self).__init__(file, pure, name)
         else:
             file_path = os.path.abspath(file)
-            super(Sql, self).__init__(sql_statements, True, file_path, name)
+            super(Sql, self).__init__(sql_statements, pure, True, file_path, name)
         self._items = None
         self._statements = None
 
