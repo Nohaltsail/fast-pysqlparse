@@ -40,8 +40,15 @@ class Sql(pysqlparser.Sql):
         self._items = None
         self._statements = None
 
+    def content(self) -> str:
+        """
+        Get and return the sql statement raw content.
+        :return: Raw content.
+        """
+        return super(Sql, self).content()
+
     @property
-    def items(self):
+    def parseforest(self) -> list[pysqlparser.AbstractStatement]:
         """
         Get and return the sql items attribute for the current object.
         :return: The initialized value of the _items attribute.
@@ -51,7 +58,15 @@ class Sql(pysqlparser.Sql):
         return self._items
 
     @property
-    def statements(self):
+    def name(self) -> str:
+        """
+        Get and return the sql statement name.
+        :return: Sql statement name.
+        """
+        return super(Sql, self).name()
+
+    @property
+    def statements(self) -> str:
         """
         Get and return the sql statements for the current object.
         :return: All statements of SQL input.
@@ -60,21 +75,21 @@ class Sql(pysqlparser.Sql):
             self._statements = self.get_statements()
         return self._statements
 
-    def AST(self):
+    def AST(self) -> str:
         """
         Get and return Sql AST with json string
         :return: sql AST json string
         """
         return super(Sql, self).AST()
 
-    def format(self, indent=DEFAULT_FORMAT_INDENT*' '):
+    def format(self, indent=DEFAULT_FORMAT_INDENT*' ') -> str:
         """
         :param indent: indent
         :return: sql statements after format
         """
         return super(Sql, self).format(indent)
 
-    def tokens(self):
+    def tokens(self) -> list[pysqlparser.Token]:
         """
         return tokens of Statements
         """
