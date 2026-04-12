@@ -127,4 +127,4 @@ class ParsedInsert(object):
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.ParsedInsert.tokenize(statement)
+        return parser.Insert.tokenize(statement)

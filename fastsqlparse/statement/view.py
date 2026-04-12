@@ -110,6 +110,6 @@ class ParsedView(object):
 
         Useful for quick analysis without complete syntax validation.
         """
-        return parser.ParsedView.tokenize(statement)
+        return parser.View.tokenize(statement)
 
 

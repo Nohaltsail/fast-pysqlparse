@@ -68,4 +68,4 @@ class ParseDelete(object):
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.ParseDelete.tokenize(statement)
+        return parser.Delete.tokenize(statement)

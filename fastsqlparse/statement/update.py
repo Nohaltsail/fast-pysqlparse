@@ -82,4 +82,4 @@ class ParsedUpdate(object):
 
         This provides faster analysis when only token-level information is needed.
         """
-        return parser.ParsedUpdate.tokenize(statement)
+        return parser.Update.tokenize(statement)
