@@ -128,13 +128,13 @@ LIMIT 50, 100"""
 |--------------|-------------------|
 | SQL statement type is unknown or you don't want to specify the type | `parser.ParsedSQL` |
 | Multiple SQL statements separated by `;` (script execution) | `parser.ParsedSQL` |
-| SELECT / query statement | `query.ParsedQuery` |
-| INSERT statement | `insert.ParsedInsert` |
-| DELETE statement | `delete.ParsedDelete` |
-| UPDATE statement | `update.ParsedUpdate` |
-| CREATE TABLE statement | `table_ddl.ParsedCreate` |
-| CREATE VIEW statement | `view.ParsedView` |
-| CTE (WITH clause) statement | `cte.ParsedCte` |
+| SELECT / query statement | `statement.ParsedQuery` |
+| INSERT statement | `statement.ParsedInsert` |
+| DELETE statement | `statement.ParsedDelete` |
+| UPDATE statement | `statement.ParsedUpdate` |
+| CREATE TABLE statement | `statement.ParsedCreate` |
+| CREATE VIEW statement | `statement.ParsedView` |
+| CTE (WITH clause) statement | `statement.ParsedCte` |
 
 > **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `ParsedSQL`. The type-specific parsers are designed for single, known-type statements only.
 
