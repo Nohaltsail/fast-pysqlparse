@@ -4,7 +4,7 @@ from fastsqlparse.conf import *
 from fastsqlparse import pysqlparser
 
 
-class ParsedSQL(pysqlparser.ParsedSQL):
+class ParsedSQL(pysqlparser.Sql):
     """
     Parse SQL statements, which can be any combination or single statement of:
     CREATE TABLE, SELECT, INSERT, DELETE, VIEW, UPDATE, etc.
