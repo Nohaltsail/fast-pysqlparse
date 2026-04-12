@@ -3,7 +3,7 @@ from typing import Tuple, List, Any
 import fastsqlparse.pysqlparser as parser
 
 
-class Update(object):
+class ParsedUpdate(object):
     """
     A SQL UPDATE statement parser and analyzer.
 
@@ -15,7 +15,7 @@ class Update(object):
     - Lexical tokens
 
     Typical usage:
-        >>> update = Update("UPDATE employees SET salary = 5000 WHERE dept = 'IT'")
+        >>> update = ParsedUpdate("UPDATE employees SET salary = 5000 WHERE dept = 'IT'")
         >>> print(update.fields)  # ['salary']
         >>> print(update.values)   # ['5000']
     """
@@ -45,9 +45,9 @@ class Update(object):
         """
         self.name = ""
         self.__stmt__ = parser.update(statement)
-        for m in Update.__callables__:
+        for m in ParsedUpdate.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for n in Update.__attrs__:
+        for n in ParsedUpdate.__attrs__:
             setattr(self, n, getattr(self.__stmt__, n))
 
     def __repr__(self) -> str:
@@ -82,4 +82,4 @@ class Update(object):
 
         This provides faster analysis when only token-level information is needed.
         """
-        return parser.Update.tokenize(statement)
+        return parser.ParsedUpdate.tokenize(statement)

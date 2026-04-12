@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-from fastsqlparse.statement.cte import Cte
-from fastsqlparse.statement.insert import Insert
-from fastsqlparse.statement.query import Query
-from fastsqlparse.statement.table_ddl import TableDDL
-from fastsqlparse.statement.view import View
-from fastsqlparse.statement.update import Update
-from fastsqlparse.statement.delete import Delete
+from fastsqlparse.statement.cte import ParsedCte
+from fastsqlparse.statement.insert import ParsedInsert
+from fastsqlparse.statement.query import ParsedQuery
+from fastsqlparse.statement.table_ddl import ParsedCreate
+from fastsqlparse.statement.view import ParsedView
+from fastsqlparse.statement.update import ParsedUpdate
+from fastsqlparse.statement.delete import ParseDelete
 
 
 __all__ = (
-    "Cte",
-    "Insert",
-    "Query",
-    "TableDDL",
-    "View",
-    "Update",
-    "Delete"
+    "ParsedCte",
+    "ParsedInsert",
+    "ParsedQuery",
+    "ParsedCreate",
+    "ParsedView",
+    "ParsedUpdate",
+    "ParseDelete"
 )

@@ -2,7 +2,7 @@ from typing import List, Any, Tuple
 from fastsqlparse import pysqlparser as parser
 
 
-class Query(object):
+class ParsedQuery(object):
     """
     Query class is used to parse and process SQL queries.
 
@@ -48,7 +48,6 @@ class Query(object):
             pure (bool): Parse SQL without note
         """
         self.__stmt__ = parser.query(statement, name, pure)
-        self.unions = []
         self._columns = None
         self.cte = None
         self.__init_items(self.__stmt__)
@@ -60,9 +59,9 @@ class Query(object):
         Args:
             stmt (object): The parsed SQL statement object.
         """
-        for m in Query.__callables__:
+        for m in ParsedQuery.__callables__:
             setattr(self, m, getattr(stmt, m))
-        for name in Query.__attrs__:
+        for name in ParsedQuery.__attrs__:
             attr = getattr(stmt, name)
             if name == "cte_names":
                 if not attr:
@@ -74,6 +73,7 @@ class Query(object):
             if name == "union_keys":
                 if not attr:
                     continue
+                self.unions = []
                 for i, it in enumerate(attr):
                     self.unions.append(getattr(stmt, "union_stmt")[i])
                     self.unions.append(it)

@@ -7,7 +7,7 @@ You should use UTF8-encoding statements string or sql file.
 """
 
 from fastsqlparse.statement import *
-from fastsqlparse.sql import Sql
+from fastsqlparse.parser import ParsedSQL
 from fastsqlparse.pysqlparser import AbstractStatement
 from fastsqlparse.pysqlparser import (
     view,

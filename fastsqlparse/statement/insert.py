@@ -4,7 +4,7 @@ import fastsqlparse.pysqlparser as parser
 from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
 
 
-class Insert(object):
+class ParsedInsert(object):
     """
     A SQL INSERT statement parser and structured representation.
 
@@ -57,9 +57,9 @@ class Insert(object):
         """
         self.__stmt__ = parser.insert(statement, pure)
         self.name = ""
-        for m in Insert.__callables__:
+        for m in ParsedInsert.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for name in Insert.__attrs__:
+        for name in ParsedInsert.__attrs__:
             attr = getattr(self.__stmt__, name)
             setattr(self, name, attr)
         self._stmt = ""
@@ -127,4 +127,4 @@ class Insert(object):
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.Insert.tokenize(statement)
+        return parser.ParsedInsert.tokenize(statement)

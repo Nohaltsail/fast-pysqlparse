@@ -1,13 +1,13 @@
-SQL Parser Library:
+# SQL Parser Library:
 A high-performance, cross-platform SQL parsing library, designed to handle the most complex SQL queries with ease.
 
-Overview:
+### Overview:
 
 This library provides a robust set of tools for parsing and analyzing SQL statements. Built with a core engine in C++17 for maximum performance, it offers native Python bindings, making it the ideal choice for data-intensive applications where speed and accuracy are critical.
 
 It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
 
-Features:
+### Features:
 
 Fast SQL Parsing: Leverages a high-performance C++17 core to parse SQL statements rapidly.
 
@@ -35,7 +35,11 @@ Python API: A clean and intuitive Python library built around the high-speed nat
 Performance:
 This library is engineered for speed. By moving the computationally intensive parsing work to a native C++ layer, it significantly outperforms pure-Python parsing libraries, especially when dealing with large, complex SQL scripts.
 
-Installation:
+### Installation:
+
+```shell
+pip install fast-pysqlparse
+```
 
 From Source:
     
@@ -46,15 +50,15 @@ From Source:
     cd dist
     pip install fast_pysqlparse-*.whl
 
-Quick Start
+### Quick Start
 
 ```shell
 pip install fast-pysqlparse
 ```
 
 ```python
-from fastsqlparse import Sql
-from fastsqlparse.statement.query import Query
+from fastsqlparse import ParsedSQL
+from fastsqlparse.statement.query import ParsedQuery
 
 if __name__ == '__main__':
     sql = """
@@ -99,12 +103,12 @@ LIMIT 50, 100"""
     print("sql length: ", sql_len)
 
     # parse sql statements to SQL object
-    sql_stmt = Sql(sql)
+    sql_stmt = ParsedSQL(sql)
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
     # Tokenization - returns list of tuples containing (value, type, position)
-    tokens = Query.tokenize(sql)  # Get tuple list of token information (value, type, position)
+    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (value, type, position)
 
     # Alternative tokenization - returns list of token objects with attributes
     token_obj_list = sql_stmt.tokens()  # Get object list of token information
@@ -113,10 +117,29 @@ LIMIT 50, 100"""
     print(sql_stmt.AST())  # Get JSON structure of the SQL statement
 
     # Extract table lineage/dependencies from the query
-    src_tables = Query.parse_dependence(sql)  # Get source tables (dependencies) of the query
+    src_tables = ParsedQuery.parse_dependence(sql)  # Get source tables (dependencies) of the query
 
 ```
 
-Contributing:
+
+### When to Use Which Parser
+
+| **Scenario** | **Parser to Use** |
+|--------------|-------------------|
+| SQL statement type is unknown or you don't want to specify the type | `parser.ParsedSQL` |
+| Multiple SQL statements separated by `;` (script execution) | `parser.ParsedSQL` |
+| SELECT / query statement | `query.ParsedQuery` |
+| INSERT statement | `insert.ParsedInsert` |
+| DELETE statement | `delete.ParsedDelete` |
+| UPDATE statement | `update.ParsedUpdate` |
+| CREATE TABLE statement | `table_ddl.ParsedCreate` |
+| CREATE VIEW statement | `view.ParsedView` |
+| CTE (WITH clause) statement | `cte.ParsedCte` |
+
+> **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `ParsedSQL`. The type-specific parsers are designed for single, known-type statements only.
+
+
+
+### Contributing:
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest new features.
 

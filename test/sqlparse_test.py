@@ -1,5 +1,5 @@
-from fastsqlparse import Sql
-from fastsqlparse.statement.query import Query
+from fastsqlparse import ParsedSQL
+from fastsqlparse.statement.query import ParsedQuery
 
 if __name__ == '__main__':
     sql = """
@@ -44,12 +44,12 @@ LIMIT 50, 100"""
     print("sql length: ", sql_len)
 
     # parse sql statements to SQL object
-    sql_stmt = Sql(sql)
+    sql_stmt = ParsedSQL(sql)
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
     # Tokenization - returns list of tuples containing (value, type, position)
-    tokens = Query.tokenize(sql)  # Get tuple list of token information (value, type, position)
+    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (value, type, position)
 
     # Alternative tokenization - returns list of token objects with attributes
     token_obj_list = sql_stmt.tokens()  # Get object list of token information
@@ -58,4 +58,4 @@ LIMIT 50, 100"""
     print(sql_stmt.AST())  # Get JSON structure of the SQL statement
 
     # Extract table lineage/dependencies from the query
-    src_tables = Query.parse_dependence(sql)  # Get source tables (dependencies) of the query
+    src_tables = ParsedQuery.parse_dependence(sql)  # Get source tables (dependencies) of the query

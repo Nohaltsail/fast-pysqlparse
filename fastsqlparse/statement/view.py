@@ -3,7 +3,7 @@ import fastsqlparse.pysqlparser as parser
 from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
 
 
-class View(object):
+class ParsedView(object):
     """
     A SQL View parser and representation class.
 
@@ -44,9 +44,9 @@ class View(object):
         """
         self.name = ""
         self.__stmt__ = parser.view(statement, pure)
-        for m in View.__callables__:
+        for m in ParsedView.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for n in View.__attrs__:
+        for n in ParsedView.__attrs__:
             setattr(self, n, getattr(self.__stmt__, n))
 
     def __repr__(self) -> str:
@@ -110,6 +110,6 @@ class View(object):
 
         Useful for quick analysis without complete syntax validation.
         """
-        return parser.View.tokenize(statement)
+        return parser.ParsedView.tokenize(statement)
 
 

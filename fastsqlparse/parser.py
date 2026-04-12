@@ -4,7 +4,7 @@ from fastsqlparse.conf import *
 from fastsqlparse import pysqlparser
 
 
-class Sql(pysqlparser.Sql):
+class ParsedSQL(pysqlparser.ParsedSQL):
     """
     Parse SQL statements, which can be any combination or single statement of:
     CREATE TABLE, SELECT, INSERT, DELETE, VIEW, UPDATE, etc.
@@ -31,12 +31,12 @@ class Sql(pysqlparser.Sql):
         if not sql_statements and not file:
             raise Exception("empty SQL statement or file")
         elif not file:
-            super(Sql, self).__init__(sql_statements, pure, False, "", name)
+            super(ParsedSQL, self).__init__(sql_statements, pure, False, "", name)
         elif not sql_statements:
-            super(Sql, self).__init__(file, pure, name)
+            super(ParsedSQL, self).__init__(file, pure, name)
         else:
             file_path = os.path.abspath(file)
-            super(Sql, self).__init__(sql_statements, pure, True, file_path, name)
+            super(ParsedSQL, self).__init__(sql_statements, pure, True, file_path, name)
         self._items = None
         self._statements = None
 
@@ -45,7 +45,7 @@ class Sql(pysqlparser.Sql):
         Get and return the sql statement raw content.
         :return: Raw content.
         """
-        return super(Sql, self).content()
+        return super(ParsedSQL, self).content()
 
     @property
     def parseforest(self) -> list[pysqlparser.AbstractStatement]:
@@ -63,7 +63,7 @@ class Sql(pysqlparser.Sql):
         Get and return the sql statement name.
         :return: Sql statement name.
         """
-        return super(Sql, self).name()
+        return super(ParsedSQL, self).name()
 
     @property
     def statements(self) -> str:
@@ -80,18 +80,18 @@ class Sql(pysqlparser.Sql):
         Get and return Sql AST with json string
         :return: sql AST json string
         """
-        return super(Sql, self).AST()
+        return super(ParsedSQL, self).AST()
 
     def format(self, indent=DEFAULT_FORMAT_INDENT*' ') -> str:
         """
         :param indent: indent
         :return: sql statements after format
         """
-        return super(Sql, self).format(indent)
+        return super(ParsedSQL, self).format(indent)
 
     def tokens(self) -> list[pysqlparser.Token]:
         """
         return tokens of Statements
         """
-        return super(Sql, self).tokens()
+        return super(ParsedSQL, self).tokens()
 

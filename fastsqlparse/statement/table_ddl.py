@@ -1,7 +1,7 @@
 import fastsqlparse.pysqlparser as parser
 
 
-class TableDDL(object):
+class ParsedCreate(object):
     """
     A SQL CREATE TABLE statement parser and structured representation.
 
@@ -38,9 +38,9 @@ class TableDDL(object):
         """
         self.name = ""
         self.__stmt__ = parser.create(statement)
-        for m in TableDDL.__callables__:
+        for m in ParsedCreate.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for n in TableDDL.__attrs__:
+        for n in ParsedCreate.__attrs__:
             setattr(self, n, getattr(self.__stmt__, n))
 
     def __repr__(self) -> str:
