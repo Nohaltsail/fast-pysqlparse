@@ -58,7 +58,7 @@ pip install fast-pysqlparse
 
 ```python
 from fastsqlparse import ParsedSQL
-from fastsqlparse.statement.query import ParsedQuery
+from fastsqlparse.statement import ParsedQuery
 
 if __name__ == '__main__':
     sql = """
