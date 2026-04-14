@@ -15,7 +15,7 @@ from fastsqlparse.pysqlparser import (
 )
 
 tokenize: callable = ParsedAbstract.tokenize
-tokenize_query: callable = ParsedDQL.tokenize
+tokenize_query: callable = ParsedQuery.tokenize
 tokenize_insert: callable = ParsedInsert.tokenize
 tokenize_update: callable = ParsedUpdate.tokenize
 tokenize_delete: callable = ParsedDelete.tokenize
@@ -26,13 +26,13 @@ tokenize_view: callable = ParsedView.tokenize
 __all__ = (
     ParsedSQL,
     ParsedAbstract,
-    ParsedCte,
+    ParsedCTE,
     ParsedInsert,
     ParsedQuery,
     ParsedCreate,
     ParsedView,
     ParsedUpdate,
-    ParseDelete,
+    ParsedDelete,
     format,
     strip_note,
     tokenize,

@@ -4,7 +4,7 @@ from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
 import fastsqlparse.pysqlparser as parser
 
 
-class ParsedCte(object):
+class ParsedCTE(object):
     """
     Common Table Expression (CTE) parser and manipulation class.
 
@@ -42,9 +42,9 @@ class ParsedCte(object):
     ):
         self.name = None or "WITH"
         self.__stmt__ = parser.cte(statement, pure)
-        for m in ParsedCte.__callables__:
+        for m in ParsedCTE.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for n in ParsedCte.__attrs__:
+        for n in ParsedCTE.__attrs__:
             setattr(self, n, getattr(self.__stmt__, n))
 
     def __repr__(self) -> str:

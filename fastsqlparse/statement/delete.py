@@ -3,7 +3,7 @@ from typing import Tuple, List, Any
 import fastsqlparse.pysqlparser as parser
 
 
-class ParseDelete(object):
+class ParsedDelete(object):
     """
     A SQL DELETE statement parser and analyzer.
 
@@ -34,9 +34,9 @@ class ParseDelete(object):
         """
         self.name = ""
         self.__stmt__ = parser.delete(statement)
-        for m in ParseDelete.__callables__:
+        for m in ParsedDelete.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
-        for n in ParseDelete.__attrs__:
+        for n in ParsedDelete.__attrs__:
             setattr(self, n, getattr(self.__stmt__, n))
 
     def __repr__(self) -> str:

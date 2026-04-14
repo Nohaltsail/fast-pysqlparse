@@ -124,17 +124,17 @@ LIMIT 50, 100"""
 
 ### When to Use Which Parser
 
-| **Scenario** | **Parser to Use** |
-|--------------|-------------------|
-| SQL statement type is unknown or you don't want to specify the type | `parser.ParsedSQL` |
-| Multiple SQL statements separated by `;` (script execution) | `parser.ParsedSQL` |
-| SELECT / query statement | `statement.ParsedQuery` |
+| **Scenario** | **Parser to Use**        |
+|--------------|--------------------------|
+| SQL statement type is unknown or you don't want to specify the type | `parser.ParsedSQL`       |
+| Multiple SQL statements separated by `;` (script execution) | `parser.ParsedSQL`       |
+| SELECT / query statement | `statement.ParsedQuery`  |
 | INSERT statement | `statement.ParsedInsert` |
 | DELETE statement | `statement.ParsedDelete` |
 | UPDATE statement | `statement.ParsedUpdate` |
 | CREATE TABLE statement | `statement.ParsedCreate` |
-| CREATE VIEW statement | `statement.ParsedView` |
-| CTE (WITH clause) statement | `statement.ParsedCte` |
+| CREATE VIEW statement | `statement.ParsedView`   |
+| CTE (WITH clause) statement | `statement.ParsedCTE`    |
 
 > **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `ParsedSQL`. The type-specific parsers are designed for single, known-type statements only.
 
