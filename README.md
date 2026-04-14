@@ -138,7 +138,8 @@ LIMIT 50, 100"""
 
 > **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `ParsedSQL`. The type-specific parsers are designed for single, known-type statements only.
 
-
+### Detail DOC
+[zh_CN](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/API_DOCUMENTATION.md)
 
 ### Contributing:
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest new features.
