@@ -592,7 +592,7 @@ except Exception as e:
 ```python
 query = parsed.parseforest[0]
 for source in query.sources:
-    print(source.table_name)  # 或查看source的属性
+    print(source.table)  # 或查看source的属性
 ```
 
 ### Q2: 如何处理多语句SQL？
