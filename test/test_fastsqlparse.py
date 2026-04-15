@@ -632,7 +632,6 @@ LIMIT 1000;
         }
     
 
-
 def run_all_tests():
     """运行所有测试"""
     print("=" * 80)
