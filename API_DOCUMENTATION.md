@@ -161,7 +161,18 @@ for token_type, token_value, pos in tokens[:5]:
 
 **示例**:
 ```python
-from fastsqlparse import ParsedCTE
+from fastsqlparse import ParsedCTE, ParsedQuery
+
+sql = """
+WITH RECURSIVE cte AS (
+    SELECT 1 as n
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 10
+)
+"""
+cte = ParsedCTE(sql)
+print("CTE语句:", cte.cte_stmts)
+print("格式化:\n", cte.format())
 
 sql = """
 WITH RECURSIVE cte AS (
@@ -172,12 +183,10 @@ WITH RECURSIVE cte AS (
 SELECT * FROM cte
 """
 
-cte = ParsedCTE(sql)
-print("CTE语句:", cte.cte_stmts)
-print("格式化:\n", cte.format())
-
-# Tokenizer
-tokens = ParsedCTE.tokenize(sql)
+ctes = ParsedQuery(sql, 'test').cte
+for cte_name in ctes:
+    print("CTE名称:", cte_name)
+    print("CTE语句:", ctes[cte_name].format())
 ```
 
 ---
@@ -210,8 +219,7 @@ tokens = ParsedCTE.tokenize(sql)
 ```python
 from fastsqlparse import ParsedInsert
 
-# VALUES方式
-sql1 = "INSERT INTO users (id, name) VALUES (1, 'Alice')"
+sql1 = "INSERT INTO users (id, name) VALUE (1, 'Alice')"
 insert1 = ParsedInsert(sql1)
 print("表名:", insert1.name)
 print("列:", insert1.columns)
@@ -225,13 +233,17 @@ WITH stats AS (
     FROM orders
     GROUP BY product_id
 )
-SELECT product_id, total FROM stats
+SELECT product_id, total FROM stats sts
 """
 insert2 = ParsedInsert(sql2)
 print("表名:", insert2.name)
 print("有查询:", insert2.query_load)
 if insert2.query:
-    print("查询来源:", insert2.query.sources)
+    for source in insert2.query.sources:
+        print("子句:", source.raw)
+        print("表:", source.table)
+        print("别名:", source.alias)
+
 ```
 
 ---
@@ -495,7 +507,7 @@ clean = strip_note(sql)
 from fastsqlparse import format
 
 sql = "SELECT * FROM users WHERE id=1"
-formatted = format(sql, indent="  ")
+formatted = format(sql, "query", indent="  ")
 ```
 #### `tokenize(sql: str) -> List[Tuple[str, str, int]]`
 词法分析
@@ -536,7 +548,7 @@ tokens = tokenize_query("SELECT * FROM users")
 ```python
 tokens = parsed.tokens()
 for token in tokens:
-    print(f"Type: {token.type}, Value: {token.value}, Pos: {token.position}")
+    print(f"Type: {token.type}, Value: {token.value}, Pos: {token.at}")
 ```
 
 ---
@@ -552,8 +564,9 @@ AST以JSON格式返回，包含:
 
 ```python
 import json
-ast_json = parsed.AST()
-ast_obj = json.loads(ast_json)
+ast_json_list = parsed.AST()
+ast_json_dic = parsed_query.ast()
+ast_obj = json.loads(ast_json_dic)
 ```
 
 ---
