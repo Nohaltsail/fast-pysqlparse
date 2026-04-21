@@ -78,6 +78,9 @@ class ParsedQuery(object):
                     self.unions.append(getattr(stmt, "union_stmt")[i])
                     self.unions.append(it)
                 self.unions.append(getattr(stmt, "union_stmt")[-1])
+                self.cte = {} if getattr(stmt, "cte_names") else None
+                for n in getattr(stmt, "cte_names"):
+                    self.cte[n] = getattr(stmt, "cte_map")[n]
                 break
             if name == "union_stmt" or name == "cte_map":
                 continue
