@@ -96,7 +96,7 @@ tokens = parsed.tokens()
 - `clause_aggregation`: GROUP BY/HAVING子句
 - `clause_sorting`: ORDER BY子句
 - `clause_limit`: LIMIT子句
-- `cte_list`: CTE名称列表
+- `parent`: Parsed父对象
 - `cte`: CTE映射字典
 - `unions`: UNION查询列表
 - `subquery`: 子查询信息
