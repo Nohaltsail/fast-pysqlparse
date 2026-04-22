@@ -96,7 +96,7 @@ tokens = parsed.tokens()
 - `clause_aggregation`: GROUP BY/HAVING子句
 - `clause_sorting`: ORDER BY子句
 - `clause_limit`: LIMIT子句
-- `cte_names`: CTE名称列表
+- `cte_list`: CTE名称列表
 - `cte`: CTE映射字典
 - `unions`: UNION查询列表
 - `subquery`: 子查询信息
@@ -151,7 +151,7 @@ for token_type, token_value, pos in tokens[:5]:
 
 **主要属性**:
 - `raw`: 原始CTE语句
-- `cte_stmts`: CTE语句列表
+- `units`: CTE语句列表
 - `name`: CTE名称
 
 **主要方法**:
@@ -171,7 +171,7 @@ WITH RECURSIVE cte AS (
 )
 """
 cte = ParsedCTE(sql)
-print("CTE语句:", cte.cte_stmts)
+print("CTE语句:", cte.units)
 print("格式化:\n", cte.format())
 
 sql = """

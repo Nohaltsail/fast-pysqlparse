@@ -26,7 +26,7 @@ class ParsedCTE(object):
     
     __attrs__ = (
         "raw",
-        "cte_stmts",
+        "units",
     )
 
     __callables__ = (

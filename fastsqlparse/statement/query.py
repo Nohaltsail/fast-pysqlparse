@@ -14,11 +14,12 @@ class ParsedQuery(object):
         "name",
         "raw",
         "super",
+        "parent",
         "level",
-        "union_keys",
-        "union_stmt",
-        "cte_names",
-        "cte_map",
+        "union_type",
+        "unions",
+        "cte_list",
+        "with",
         "statement",
         "subquery",
         "clause_select",
@@ -49,7 +50,6 @@ class ParsedQuery(object):
         """
         self.__stmt__ = parser.query(statement, name, pure)
         self._columns = None
-        self.cte = None
         self.__init_items(self.__stmt__)
 
     def __init_items(self, stmt):
@@ -63,26 +63,28 @@ class ParsedQuery(object):
             setattr(self, m, getattr(stmt, m))
         for name in ParsedQuery.__attrs__:
             attr = getattr(stmt, name)
-            if name == "cte_names":
+            if name == "cte_list":
                 if not attr:
                     continue
                 self.cte = dict()
                 for n in attr:
-                    self.cte[n] = getattr(stmt, "cte_map")[n]
+                    self.cte[n] = getattr(stmt, "with")[n]
                 continue
-            if name == "union_keys":
+            if name == "union_type":
                 if not attr:
                     continue
-                self.unions = []
+                unions = []
                 for i, it in enumerate(attr):
-                    self.unions.append(getattr(stmt, "union_stmt")[i])
-                    self.unions.append(it)
-                self.unions.append(getattr(stmt, "union_stmt")[-1])
-                self.cte = {} if getattr(stmt, "cte_names") else None
-                for n in getattr(stmt, "cte_names"):
-                    self.cte[n] = getattr(stmt, "cte_map")[n]
+                    unions.append(getattr(stmt, "unions")[i])
+                    unions.append(it)
+                unions.append(getattr(stmt, "unions")[-1])
+                self.unions = unions
+                if getattr(stmt, "cte_list"):
+                    self.cte = dict()
+                    for n in getattr(stmt, "cte_list"):
+                        self.cte[n] = getattr(stmt, "with")[n]
                 break
-            if name == "union_stmt" or name == "cte_map":
+            if name == "unions" or name == "with":
                 continue
             if name == "columns":
                 setattr(self, "_columns", attr)
