@@ -7,7 +7,7 @@ You should use UTF8-encoding statements string or sql file.
 """
 
 from fastsqlparse.statement import *
-from fastsqlparse.parser import ParsedSQL
+from fastsqlparse.parser import Parsed, ParsedOne
 from fastsqlparse.pysqlparser import AbstractStatement as ParsedAbstract
 from fastsqlparse.pysqlparser import (
     format,
@@ -24,7 +24,8 @@ tokenize_view: callable = ParsedView.tokenize
 
 
 __all__ = (
-    ParsedSQL,
+    Parsed,
+    ParsedOne,
     ParsedAbstract,
     ParsedCTE,
     ParsedInsert,

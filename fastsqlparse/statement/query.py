@@ -25,11 +25,7 @@ class ParsedQuery(object):
         "clause_select",
         "clause_source",
         "sources",
-        "clause_from",
-        "clause_condition",
-        "clause_aggregation",
-        "clause_sorting",
-        "clause_limit",
+        "clauses",
         "columns"
     )
 

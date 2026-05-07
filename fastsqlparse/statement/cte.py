@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
 import fastsqlparse.pysqlparser as parser
@@ -31,7 +31,8 @@ class ParsedCTE(object):
 
     __callables__ = (
         "ast",
-        "format"
+        "format",
+        "tokens"
     )
 
     def __init__(
@@ -65,6 +66,15 @@ class ParsedCTE(object):
             - Standardized keyword casing
             - Logical indentation of CTE definitions
             - Improved readability of nested queries
+        """
+        pass
+
+    def tokens(self) -> List[Any]:
+        """
+        Get the tokens.
+
+        Returns:
+            list: List of tokens.
         """
         pass
 
