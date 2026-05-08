@@ -1,0 +1,940 @@
+# fast-pysqlparse - 高性能SQL解析库
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)]()
+
+一个高性能、跨平台的SQL解析库，专为处理最复杂的SQL查询而设计。基于C++17核心引擎构建，提供原生Python绑定，性能远超纯Python解析方案。
+
+---
+
+## 目录
+
+- [项目概述](#项目概述)
+- [核心特性](#核心特性)
+- [性能基准](#性能基准)
+- [架构设计](#架构设计)
+- [支持的SQL特性](#支持的sql特性)
+- [快速开始](#快速开始)
+- [使用场景](#使用场景)
+- [API参考](#api参考)
+- [安装指南](#安装指南)
+
+---
+
+## 项目概述
+
+fast-pysqlparse是一个高性能SQL解析库，旨在解决传统Python SQL解析器在性能和功能上的局限。通过将计算密集型的解析工作移至原生C++层，在处理大型复杂SQL脚本时，尤其是深度嵌套查询的SQL时展现出卓越的性能表现。
+
+### 设计理念
+
+- **极致性能**: C++17核心引擎，解析速度比纯Python方案快数十倍
+- **全面支持**: 支持SELECT、INSERT、VIEW等所有主流SQL语句
+- **深度解析**: 完整的AST生成、词法分析、表血缘追踪能力
+- **易于使用**: 简洁直观的Python API，开箱即用
+- **跨平台**: Windows (.pyd) 和 Linux (.so) 原生扩展支持
+
+---
+
+## 最新更新 (v0.4)
+
+### 性能突破
+
+**超高速解析能力** 
+- **对比sqlparse**: 快 **76.75x** (0.17ms vs 13.04ms/次)
+- **对比sqlglot**: 快 **25.21x** (0.17ms vs 4.28ms/次)
+- **吞吐量**: 8218.88 PPS (Parses Per Second)
+- **大文件处理**: 1000万字符SQL仅需1.4秒 (7,455,540 CPS)
+
+### 新增核心功能
+
+**增强的CTE支持** 
+- 支持嵌套CTE定义
+- 递归CTE解析
+- CTE与INSERT/SELECT/UNION的组合使用
+- CTE血缘关系提取
+
+**智能注释处理** 
+- `pure=True` 模式：完全去除注释，提升解析速度
+- `pure=False` 模式：保留注释，格式化输出
+- `strip_note()` 工具函数：仅去除注释不格式化
+
+**Tokenizer优化** 
+- 静态方法快速词法分析：`ParsedQuery.tokenize(sql)`
+- Token类型丰富：KEYWORD、IDENTIFIER、LITERAL、WHITESPACE、SUBQUERY等
+- 位置信息完整：每个Token包含type、value、position
+
+**INSERT语句增强** 
+- 支持VALUES方式插入
+- 支持SELECT方式插入（含CTE）
+- 自动识别query_load状态
+- 提取目标表名和插入列
+
+**格式化引擎升级** 
+- 智能缩进：根据子句层级自动调整
+- 关键字大写：SELECT、FROM、WHERE等关键字统一格式化
+- 注释对齐：保留或去除注释均可保持代码整洁
+
+---
+
+## 核心特性
+
+### 双模式解析
+
+**通用解析模式** (适合未知SQL类型):
+```python
+from fastsqlparse import Parsed
+
+sql = "SELECT * FROM users WHERE age > 18"
+parsed = Parsed(sql)
+query = parsed.parsedforest[0]
+```
+
+**专用解析模式** (性能更优):
+```python
+from fastsqlparse import ParsedQuery, ParsedInsert
+
+# SELECT专用
+query = ParsedQuery("SELECT * FROM users")
+
+# INSERT专用
+insert = ParsedInsert("INSERT INTO users VALUES (1, 'Alice')")
+```
+
+### 完整的SQL支持
+
+| 特性类别 | 支持内容 | 说明 |
+|---------|---------|------|
+| **查询语句** | SELECT、WITH、UNION、子查询 | 完整DQL支持 |
+| **数据修改** | INSERT、UPDATE、DELETE | 完整DML支持 |
+| **数据定义** | CREATE TABLE、CREATE VIEW | DDL基础支持 |
+| **CTE** | WITH、WITH RECURSIVE、嵌套CTE | 公用表表达式 |
+| **JOIN** | INNER JOIN、LEFT JOIN、RIGHT JOIN、FULL JOIN | 多表关联 |
+| **聚合** | GROUP BY、HAVING、聚合函数 | 分组聚合 |
+| **排序分页** | ORDER BY、LIMIT/OFFSET | 结果集控制 |
+| **子查询** | 标量子查询、派生表、EXISTS | 嵌套查询 |
+| **集合运算** | UNION、UNION ALL、INTERSECT、EXCEPT | 集合操作 |
+| **注释处理** | `--`单行注释、`/* */`多行注释 | 灵活处理 |
+
+### 解析能力
+
+| 功能模块 | 能力描述                        | 输出形式 |
+|---------|-----------------------------|---------|
+| **AST生成** | 完整抽象结构树                     | JSON格式 |
+| **Tokenization** | 词法分析                        | Token列表 (type, value, position) |
+| **表血缘** | 源表到目标表追踪                    | 依赖关系图 |
+| **列提取** | SELECT列、WHERE列、JOIN列        | ColumnExpr对象 |
+| **数据源** | FROM/JOIN表、子查询              | SourceExpr对象 |
+| **子句提取** | SELECT/FROM/WHERE/GROUP BY等 | Clause对象 |
+| **格式化** | SQL美化输出                     | 格式化字符串 |
+| **注释剥离** | 去除SQL注释                     | 纯净SQL |
+
+---
+
+## 性能基准
+
+### 测试环境
+
+- **测试SQL长度**: 1359字符（复杂多子查询+UNION）
+- **迭代次数**: 100次
+- **硬件**: 标准开发环境
+
+### 解析速度对比
+
+| 解析器 | 总耗时(100次) | 平均每次 | 加速比 |
+|--------|--------------|---------|--------|
+| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0x** (基准) |
+| sqlparse | 1.3040s | 13.04ms | **76.75x** 更快  |
+| sqlglot | 0.4283s | 4.28ms | **25.21x** 更快  |
+
+### 大规模测试
+
+#### 测试1: 高并发解析 (5000次)
+- **SQL长度**: 639字符
+- **总耗时**: 0.6084秒
+- **PPS**: **8218.88** Parses Per Second
+- **平均延迟**: 0.1217ms/次
+
+#### 测试2: 超大SQL解析 (1000万字符)
+- **SQL长度**: 10,500,998字符
+- **总耗时**: 1.4085秒
+- **CPS**: **7,455,540** Characters Per Second
+- **状态**: 解析成功
+
+### 性能优势来源
+
+1. **C++17核心引擎**: 编译型语言的原生性能
+2. **零拷贝设计**: Python与C++间最小化数据复制
+3. **优化的内存管理**: 减少GC压力
+4. **并行友好**: 无全局锁，支持多线程解析
+
+---
+
+## 架构设计
+
+fast-pysqlparse采用分层架构设计：
+
+### 核心引擎层 (C++)
+
+**位置**: `pysqlparser.cp*.pyd` / `pysqlparser.cpython-*.so`
+
+**职责**:
+- 词法分析 (Lexer)
+- 语法分析 (Parser)
+- AST构建
+- 语义分析
+
+**技术栈**:
+- C++17标准
+- 手写递归下降解析器
+- 优化的字符串处理
+- 零拷贝内存管理
+
+### Python绑定层
+
+**位置**: `fastsqlparse/parser.py`
+
+**职责**:
+- 调用C++扩展
+- 数据结构转换
+- Pythonic API封装
+
+**核心类**:
+- `Parsed`: 通用SQL解析器
+- `ParsedQuery`: SELECT专用解析器
+- `ParsedInsert`: INSERT专用解析器
+- `ParsedCTE`: CTE专用解析器
+- `ParsedUpdate`: UPDATE专用解析器
+- `ParsedDelete`: DELETE专用解析器
+- `ParsedCreate`: CREATE专用解析器
+- `ParsedView`: VIEW专用解析器
+
+### 业务逻辑层
+
+**位置**: `fastsqlparse/statement/*.py`
+
+**职责**:
+- 高级查询分析
+- 表血缘提取
+- SQL格式化
+- 工具函数
+
+**模块**:
+- `cte.py`: CTE处理逻辑
+- `query.py`: 查询分析逻辑
+- `insert.py`: INSERT分析逻辑
+- `delete.py`: DELETE分析逻辑
+- `update.py`: UPDATE分析逻辑
+- `table_ddl.py`: DDL处理逻辑
+- `view.py`: VIEW处理逻辑
+
+### 数据流
+
+```
+SQL字符串
+    ↓
+[C++ Lexer] → Token序列
+    ↓
+[C++ Parser] → AST (内部表示)
+    ↓
+[Python Binding] → Python对象
+    ↓
+[Statement Layer] → 高级分析结果
+    ↓
+用户API (sources, columns, AST, format, etc.)
+```
+
+---
+
+## 支持的SQL特性
+
+### SELECT查询
+
+**基础查询**:
+```sql
+SELECT user_id, username FROM users WHERE age > 18
+```
+
+**复杂JOIN**:
+```sql
+SELECT u.name, o.total
+FROM users u
+INNER JOIN orders o ON u.id = o.user_id
+LEFT JOIN payments p ON o.id = p.order_id
+```
+
+**子查询**:
+```sql
+SELECT u.*, 
+    (SELECT COUNT(*) FROM orders WHERE user_id = u.id) as order_count
+FROM users u
+WHERE EXISTS (SELECT 1 FROM orders WHERE user_id = u.id)
+```
+
+**聚合查询**:
+```sql
+SELECT category, COUNT(*) as cnt, SUM(amount) as total
+FROM products
+GROUP BY category
+HAVING cnt > 10
+ORDER BY total DESC
+LIMIT 10 OFFSET 20
+```
+
+### CTE (公用表表达式)
+
+**基础CTE**:
+```sql
+WITH sales_summary AS (
+    SELECT product_id, SUM(amount) as total
+    FROM sales
+    GROUP BY product_id
+)
+SELECT * FROM sales_summary WHERE total > 1000
+```
+
+**多CTE**:
+```sql
+WITH 
+    cte1 AS (SELECT ...),
+    cte2 AS (SELECT ... FROM cte1)
+SELECT * FROM cte2
+```
+
+**递归CTE**:
+```sql
+WITH RECURSIVE hierarchy AS (
+    SELECT id, parent_id, 0 as level
+    FROM categories WHERE parent_id IS NULL
+    UNION ALL
+    SELECT c.id, c.parent_id, h.level + 1
+    FROM categories c JOIN hierarchy h ON c.parent_id = h.id
+)
+SELECT * FROM hierarchy
+```
+
+### INSERT语句
+
+**VALUES方式**:
+```sql
+INSERT INTO users (id, name, age) VALUES (1, 'Alice', 30)
+```
+
+**SELECT方式**:
+```sql
+INSERT INTO summary (product_id, total)
+SELECT product_id, SUM(amount)
+FROM orders
+GROUP BY product_id
+```
+
+**CTE + SELECT**:
+```sql
+INSERT INTO report (category, total_sales)
+WITH stats AS (
+    SELECT category, SUM(amount) as total
+    FROM orders
+    GROUP BY category
+)
+SELECT category, total FROM stats
+```
+
+### UPDATE & DELETE
+
+**UPDATE**:
+```sql
+UPDATE users SET status = 'active' WHERE last_login > '2024-01-01'
+```
+
+**DELETE**:
+```sql
+DELETE FROM logs WHERE created_at < '2024-01-01'
+```
+
+### DDL
+
+**CREATE TABLE**:
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    email VARCHAR(200)
+)
+```
+
+**CREATE VIEW**:
+```sql
+CREATE VIEW active_users AS
+SELECT * FROM users WHERE status = 'active'
+```
+
+---
+
+## 快速开始
+
+### 安装
+
+```bash
+pip install fast-pysqlparse
+```
+
+### 示例1: 基础查询解析
+
+```python
+from fastsqlparse import Parsed
+
+sql = """
+SELECT 
+    u.user_id,
+    u.username,
+    (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.user_id) as order_count
+FROM users u
+WHERE u.age > 18
+ORDER BY u.username
+LIMIT 10
+"""
+
+parsed = Parsed(sql)
+query = parsed.parsedforest[0]
+
+# 提取关键信息
+print("数据源:", query.sources)
+print("列:", query.columns)
+print("SELECT子句:", query.clause_select)
+
+for clause in query.clauses:
+    if clause.part == "CLAUSE_FROM":
+        print(f"FROM: {clause.clause}")
+    elif clause.part == "CLAUSE_WHERE":
+        print(f"WHERE: {clause.clause}")
+    elif clause.part == "CLAUSE_SORT":
+        print(f"ORDER BY: {clause.clause}")
+    elif clause.part == "CLAUSE_LIMIT":
+        print(f"LIMIT: {clause.clause}")
+```
+
+**输出**:
+```
+数据源: [<DqlSourceExpr object>]
+列: [<DqlColumnExpr object>, ...]
+SELECT子句: ['u.user_id', 'u.username', '(SELECT COUNT(*) ...) as order_count']
+FROM: FROM users u
+WHERE: WHERE u.age > 18
+ORDER BY: ORDER BY u.username
+LIMIT: LIMIT 10
+```
+
+### 示例2: CTE聚合查询
+
+```python
+from fastsqlparse import Parsed
+import json
+
+sql = """
+WITH sales_summary AS (
+    SELECT 
+        product_id,
+        SUM(amount) as total_sales,
+        AVG(amount) as avg_sales
+    FROM sales
+    WHERE sale_date >= '2024-01-01'
+    GROUP BY product_id
+)
+SELECT * FROM sales_summary WHERE total_sales > 1000
+"""
+
+parsed = Parsed(sql)
+
+# 获取Tokens
+tokens = parsed.tokens()
+print(f"TOKENS数量: {len(tokens)}")
+
+# 获取AST
+ast_str = parsed.AST()
+ast_obj = json.loads(ast_str)
+print(json.dumps(ast_obj, indent=2, ensure_ascii=False)[:500])
+
+# 格式化输出
+print(parsed.format())
+```
+
+### 示例3: INSERT with CTE
+
+```python
+from fastsqlparse import ParsedInsert
+
+sql = """
+INSERT INTO summary_table (product_id, total_amount, avg_amount)
+WITH product_stats AS (
+    SELECT 
+        product_id,
+        SUM(amount) as total_amount,
+        AVG(amount) as avg_amount
+    FROM orders
+    GROUP BY product_id
+)
+SELECT product_id, total_amount, avg_amount
+FROM product_stats
+"""
+
+insert = ParsedInsert(sql)
+
+print("目标表名:", insert.name)
+print("插入的列:", insert.columns)
+print("是否有查询加载:", insert.query_load)
+
+if insert.query:
+    print("查询对象类型:", type(insert.query))
+    print("查询的sources:", insert.query.sources)
+```
+
+**输出**:
+```
+目标表名: summary_table
+插入的列: ['product_id', 'total_amount', 'avg_amount']
+是否有查询加载: True
+查询对象类型: <class 'fastsqlparse.pysqlparser.Dql'>
+查询的sources: [<DqlSourceExpr object>]
+```
+
+### 示例4: 注释处理与格式化
+
+```python
+from fastsqlparse import Parsed, strip_note
+
+sql = """
+-- 这是用户查询的主注释
+SELECT 
+    u.user_id,  -- 用户ID
+    u.username  -- 用户名
+FROM users u  /* 用户表 */
+WHERE u.status = 'active'  -- 只查活跃用户
+"""
+
+# 保留注释并格式化
+parsed_with_comments = Parsed(sql, pure=False)
+print("保留注释的格式化结果:")
+print(parsed_with_comments.format())
+
+# 去掉注释并格式化
+parsed_pure = Parsed(sql, pure=True)
+print("\n去掉注释的格式化结果:")
+print(parsed_pure.format())
+
+# 仅去除注释（不格式化）
+stripped = strip_note(sql)
+print("\n仅去除注释:")
+print(stripped)
+```
+
+### 示例5: Tokenizer快速词法分析
+
+```python
+from fastsqlparse import ParsedQuery
+
+sql = """
+WITH region_sales AS (
+    SELECT region, SUM(amount) as total
+    FROM sales
+    GROUP BY region
+)
+SELECT * FROM region_sales
+UNION ALL
+SELECT 'TOTAL' as region, SUM(total) FROM region_sales
+"""
+
+# 使用Tokenizer进行快速词法分析
+tokens = ParsedQuery.tokenize(sql)
+print(f"Tokenizer结果 (前10个token):")
+for i, (token_type, token_value, position) in enumerate(tokens[:10]):
+    print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
+```
+
+**输出**:
+```
+Tokenizer结果 (前10个token):
+  0: type=WHITESPACE, value='
+', pos=0
+  1: type=KEYWORD, value='WITH', pos=1
+  2: type=WHITESPACE, value=' ', pos=5
+  3: type=IDENTIFIER, value='region_sales', pos=6
+  4: type=WHITESPACE, value=' ', pos=18
+  5: type=KEYWORD, value='AS', pos=19
+  6: type=WHITESPACE, value=' ', pos=21
+  7: type=SUBQUERY, value='(
+    SELECT region, SUM(amount) as total
+    FROM sales
+    GROUP BY region
+)', pos=22
+  8: type=WHITESPACE, value='
+', pos=100
+  9: type=KEYWORD, value='SELECT', pos=101
+```
+
+---
+
+## 使用场景
+
+### 场景选择指南
+
+| **场景** | **推荐解析器**          | **原因** |
+|---------|--------------------|---------|
+| SQL类型未知 | `Parsed/ParsedOne` | 自动检测SQL类型 |
+| 多语句脚本 | `Parsed`           | 支持分号分隔的多语句 |
+| 纯SELECT查询 | `ParsedQuery`      | 性能最优，专用优化 |
+| INSERT语句 | `ParsedInsert`     | 提取表名、列、查询 |
+| UPDATE语句 | `ParsedUpdate`     | 提取更新字段、条件 |
+| DELETE语句 | `ParsedDelete`     | 提取删除条件 |
+| CREATE TABLE | `ParsedCreate`     | 提取表结构 |
+| CREATE VIEW | `ParsedView`       | 提取视图定义 |
+| CTE分析 | `ParsedCTE`        | 专门处理WITH子句 |
+
+> **注意**: 如果SQL包含多个用分号分隔的语句（如脚本），**必须**使用`Parsed`。专用解析器仅适用于单个已知类型的语句。
+
+### 典型应用场景
+
+#### 1. SQL血缘分析
+```python
+from fastsqlparse import Parsed
+
+sql = """
+INSERT INTO summary
+WITH stats AS (
+    SELECT user_id, COUNT(*) as cnt
+    FROM orders
+    GROUP BY user_id
+)
+SELECT user_id, cnt FROM stats
+"""
+
+parsed = Parsed(sql)
+# 提取源表和目标表
+for stmt in parsed.parsedforest:
+    if hasattr(stmt, 'sources'):
+        for source in stmt.sources:
+            print(f"源表: {source.table}")
+```
+
+#### 2. SQL质量检查
+```python
+from fastsqlparse import ParsedQuery
+
+sql = "SELECT * FROM users WHERE id = 1"
+query = ParsedQuery(sql)
+
+# 检查是否使用SELECT *
+if '*' in query.clause_select:
+    print("警告: 使用了SELECT *")
+
+# 检查是否有WHERE条件
+has_where = any(c.part == "CLAUSE_WHERE" for c in query.clauses)
+if not has_where:
+    print("警告: 缺少WHERE条件")
+```
+
+#### 3. SQL格式化服务
+```python
+from fastsqlparse import Parsed
+
+def format_sql(sql: str, remove_comments: bool = False) -> str:
+    """格式化SQL"""
+    parsed = Parsed(sql, pure=remove_comments)
+    return parsed.format(indent="    ")
+
+# 使用
+formatted = format_sql("select * from users where id=1", remove_comments=True)
+print(formatted)
+```
+
+#### 4. 高性能批量解析
+```python
+from fastsqlparse import ParsedQuery
+import time
+
+sqls = [...]  # 大量SQL列表
+
+start = time.time()
+for sql in sqls:
+    try:
+        query = ParsedQuery(sql)
+        # 处理查询
+    except Exception as e:
+        print(f"解析失败: {e}")
+
+elapsed = time.time() - start
+print(f"解析了{len(sqls)}条SQL，耗时{elapsed:.2f}秒")
+print(f"PPS: {len(sqls)/elapsed:.2f}")
+```
+
+---
+
+## API参考
+
+### 核心类
+
+#### Parsed - 通用SQL解析器
+
+```python
+from fastsqlparse import Parsed
+
+parsed = Parsed(
+    sql_statements: str,  # SQL字符串
+    file: str = None,     # 可选：SQL文件路径
+    name: str = None,     # 可选：名称标识
+    pure: bool = False    # 是否去除注释
+)
+```
+
+**属性**:
+- `parsedforest`: List[Statement] - 解析后的语句列表
+- `statements`: List[str] - 原始SQL语句列表
+- `name`: str - 名称标识
+
+**方法**:
+- `tokens()`: List[Token] - 获取Token列表
+- `AST()`: str - 获取JSON格式的AST
+- `format(indent: str = "    ")`: str - 格式化SQL
+- `content()`: str - 获取原始SQL内容
+
+#### ParsedQuery - SELECT专用解析器
+
+```python
+from fastsqlparse import ParsedQuery
+
+query = ParsedQuery(
+    statement: str,  # SELECT语句
+    name: str = None,
+    pure: bool = False
+)
+```
+
+**属性**:
+- `sources`: List[DqlSourceExpr] - 数据源列表
+- `columns`: List[DqlColumnExpr] - 列列表
+- `clause_select`: List[str] - SELECT子句内容
+- `clauses`: List[Clause] - 所有子句
+- `cte`: Dict[str, CTE] - CTE映射
+- `unions`: List[Query] - UNION查询列表
+- `subquery`: List[SubQuery] - 子查询列表
+- `level`: int - 嵌套层级
+
+**静态方法**:
+- `tokenize(statement: str)`: List[Tuple[str, str, int]] - 快速词法分析
+
+#### ParsedInsert - INSERT专用解析器
+
+```python
+from fastsqlparse import ParsedInsert
+
+insert = ParsedInsert(
+    statement: str,  # INSERT语句
+    pure: bool = False
+)
+```
+
+**属性**:
+- `name`: str - 目标表名
+- `columns`: List[str] - 插入的列
+- `values`: List - 插入的值
+- `query`: Dql - 查询对象（INSERT...SELECT时）
+- `query_load`: bool - 是否有查询加载
+- `main_stmt`: str - 主语句
+- `cte_stmt`: str - CTE语句
+- `query_stmt`: str - 查询语句
+
+**静态方法**:
+- `tokenize(statement: str)`: List[Tuple[str, str, int]]
+
+### 工具函数
+
+#### strip_note(sql: str) -> str
+去除SQL中的注释
+
+```python
+from fastsqlparse import strip_note
+
+clean_sql = strip_note("SELECT * FROM users -- comment")
+# 结果: "SELECT * FROM users"
+```
+
+#### tokenize系列函数
+
+```python
+from fastsqlparse import (
+    tokenize,
+    tokenize_query,
+    tokenize_cte,
+    tokenize_insert,
+    tokenize_update,
+    tokenize_delete,
+    tokenize_view
+)
+
+# 通用tokenizer
+tokens = tokenize(sql)
+
+# 专用tokenizer (更快)
+tokens = tokenize_query("SELECT * FROM users")
+tokens = tokenize_cte("WITH cte AS (...)")
+tokens = tokenize_insert("INSERT INTO ...")
+```
+
+### Token结构
+
+```python
+class Token:
+    type: str      # Token类型
+    value: str     # Token值
+    at: int        # 位置索引
+```
+
+**Token类型**:
+- `KEYWORD`: SQL关键字 (SELECT, FROM, WHERE等)
+- `IDENTIFIER`: 标识符 (表名、列名、别名)
+- `LITERAL`: 字面量 (数字、字符串)
+- `WHITESPACE`: 空白字符
+- `SUBQUERY`: 子查询
+- `OPERATOR`: 运算符
+- `COMMENT`: 注释
+
+### AST结构
+
+AST以JSON字符串形式返回，包含：
+- 查询子句 (SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT)
+- CTE定义
+- 列信息
+- 数据源信息
+- 联合查询信息
+- 子查询信息
+
+```python
+import json
+
+parsed = Parsed(sql)
+ast_json = parsed.AST()
+ast_obj = json.loads(ast_json)
+
+# 访问AST
+print(ast_obj.keys())
+```
+
+---
+
+## 安装指南
+
+### 从PyPI安装 (推荐)
+
+```bash
+pip install fast-pysqlparse
+```
+
+### 从源码安装
+
+```bash
+git clone https://github.com/Nohaltsail/fast-pysqlparse.git
+cd fast-pysqlparse
+pip install build
+python -m build
+cd dist
+pip install fast_pysqlparse-*.whl
+```
+
+### 预编译扩展
+
+项目已提供多平台预编译扩展：
+
+**Windows** (.pyd):
+- `pysqlparser.cp310-win_amd64.pyd` (Python 3.10)
+- `pysqlparser.cp311-win_amd64.pyd` (Python 3.11)
+- `pysqlparser.cp312-win_amd64.pyd` (Python 3.12)
+- `pysqlparser.cp313-win_amd64.pyd` (Python 3.13)
+- `pysqlparser.cp314-win_amd64.pyd` (Python 3.14)
+
+**Linux** (.so):
+- `pysqlparser.cpython-310-x86_64-linux-gnu.so`
+- `pysqlparser.cpython-311-x86_64-linux-gnu.so`
+- `pysqlparser.cpython-312-x86_64-linux-gnu.so`
+- `pysqlparser.cpython-313-x86_64-linux-gnu.so`
+- `pysqlparser.cpython-314-x86_64-linux-gnu.so`
+
+---
+
+
+### 类型映射
+
+| Python对象 |  说明 |
+|-----------|------|
+| `DqlSourceExpr` | 数据源表达式 |
+| `DqlColumnExpr` | 列表达式 |
+| `Token` | 词法单元 |
+| `Clause` | SQL子句 |
+| `CTE` | 公用表表达式 |
+
+### 错误处理
+
+```python
+from fastsqlparse import Parsed
+
+try:
+    parsed = Parsed(invalid_sql)
+except Exception as e:
+    print(f"解析失败: {e}")
+    # 可能的错误:
+    # - 语法错误
+    # - 不支持的SQL特性
+    # - 内存不足
+```
+
+### 最佳实践
+
+1. **选择合适的解析器**
+   - 未知类型或多语句 → `Parsed`
+   - 已知SELECT → `ParsedQuery` (更快)
+   - 已知INSERT → `ParsedInsert`
+
+2. **性能优化**
+   - 使用`pure=True`跳过注释处理
+   - 缓存解析结果避免重复解析
+   - 仅需词法信息时使用`tokenize()`静态方法
+
+3. **内存优化**
+   - 大SQL分批解析
+   - 及时释放不需要的解析结果
+   - 使用生成器处理大量SQL
+
+---
+
+## 详细文档
+
+完整的API文档请参考: [API_DOC_CN.md](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/API_DOC_CN.md)
+
+---
+
+## 贡献指南
+
+欢迎贡献！您可以通过以下方式参与：
+
+- 报告Bug
+- 提出新功能建议
+- 改进文档
+- 提交Pull Request
+
+### 开发环境设置
+
+```bash
+git clone https://github.com/Nohaltsail/fast-pysqlparse.git
+cd fast-pysqlparse
+pip install -e .
+pytest test/
+```
+
+---
+
+## 许可证
+
+Apache-2.0 License
+
+
+---
+
+**GitHub**: https://github.com/Nohaltsail/fast-pysqlparse

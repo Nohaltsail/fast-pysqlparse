@@ -1,4 +1,4 @@
-# fast-sqlparse API 文档与使用指南
+# fast-pysqlparse API 文档与使用指南
 
 ## 目录
 - [安装](#安装)
@@ -21,15 +21,14 @@ pip install fast-pysqlparse
 ## 快速开始
 
 ```python
-import fastsqlparse
-from fastsqlparse import ParsedSQL, ParsedQuery, ParsedCTE, ParsedInsert
+from fastsqlparse import Parsed, ParsedQuery
 
 # 解析SQL
 sql = "SELECT * FROM users WHERE age > 18"
-parsed = ParsedSQL(sql)
+parsed = Parsed(sql)
 
 # 获取解析结果
-query = parsed.parseforest[0]
+query = parsed.parsedforest[0]
 print(query.sources)    # 数据源
 print(query.columns)    # 列信息
 print(query.format())   # 格式化输出
@@ -39,7 +38,7 @@ print(query.format())   # 格式化输出
 
 ## 核心类说明
 
-### 1. ParsedSQL - SQL解析器主类
+### 1. Parsed - SQL解析器主类
 
 **功能**: 解析任意SQL语句（SELECT、INSERT、UPDATE、DELETE、CREATE等）
 
@@ -50,7 +49,7 @@ print(query.format())   # 格式化输出
 - `pure` (bool, default=False): 是否忽略注释
 
 **主要属性和方法**:
-- `parseforest`: 返回解析后的语句列表
+- `parsedforest`: 返回解析后的语句列表
 - `statements`: 所有SQL语句
 - `tokens()`: 获取词法单元
 - `AST()`: 获取抽象语法树（JSON格式）
@@ -60,11 +59,13 @@ print(query.format())   # 格式化输出
 
 **示例**:
 ```python
+from fastsqlparse import Parsed
+
 sql = "SELECT u.id, u.name FROM users u WHERE u.age > 18"
-parsed = ParsedSQL(sql)
+parsed = Parsed(sql)
 
 # 获取解析树
-items = parsed.parseforest
+items = parsed.parsedforest
 
 # 格式化
 formatted = parsed.format(indent="  ")
@@ -91,11 +92,12 @@ tokens = parsed.tokens()
 - `sources`: 数据源列表（FROM/JOIN的表）
 - `columns`: 选择的列列表
 - `clause_select`: SELECT子句内容
-- `clause_from`: FROM子句内容
-- `clause_condition`: WHERE子句内容
-- `clause_aggregation`: GROUP BY/HAVING子句
-- `clause_sorting`: ORDER BY子句
-- `clause_limit`: LIMIT子句
+- `clauses`: 子句列表
+  - FROM子句内容
+  - WHERE子句内容
+  - GROUP BY/HAVING子句
+  - ORDER BY子句
+  - LIMIT子句
 - `parent`: Parsed父对象
 - `cte`: CTE映射字典
 - `unions`: UNION查询列表
@@ -128,9 +130,17 @@ query = ParsedQuery(sql, "user_orders")
 # 提取信息
 print("数据源:", query.sources)
 print("列:", query.columns)
-print("WHERE条件:", query.clause_condition)
-print("GROUP BY:", query.clause_aggregation)
-print("ORDER BY:", query.clause_sorting)
+for i, clause in enumerate(query.clauses):
+    if clause.part == "CLAUSE_FROM":
+        print(f"FROM子句: {clause.clause}")
+    elif clause.part == "CLAUSE_WHERE":
+        print(f"WHERE条件: {clause.clause}")
+    elif clause.part == "CLAUSE_AGGREGATION":
+        print(f"GROUP BY: {clause.clause}")
+    elif clause.part == "CLAUSE_SORT":
+        print(f"ORDER BY: {clause.clause}")
+    elif clause.part == "CLAUSE_LIMIT":
+        print(f"LIMIT: {clause.clause}")
 
 # 快速tokenizer
 tokens = ParsedQuery.tokenize(sql)
@@ -295,7 +305,7 @@ create = ParsedCreate(sql)
 ### 场景1: 普通查询（含子查询）
 
 ```python
-from fastsqlparse import ParsedSQL
+from fastsqlparse import Parsed
 
 sql = """
 SELECT 
@@ -308,28 +318,33 @@ ORDER BY u.username
 LIMIT 10
 """
 
-parsed = ParsedSQL(sql)
-query = parsed.parseforest[0]
+parsed = Parsed(sql)
+query = parsed.parsedforest[0]
 
 # 提取关键信息
 print("数据源:", query.sources)
 print("列:", query.columns)
-print("SELECT:", query.clause_select)
-print("FROM:", query.clause_from)
-print("WHERE:", query.clause_condition)
-print("ORDER BY:", query.clause_sorting)
-print("LIMIT:", query.clause_limit)
+print("SELECT子句:", query.clause_select)
+for clause in query.clauses:
+    if clause.part == "CLAUSE_FROM":
+        print(f"FROM子句: {clause.clause}")
+    elif clause.part == "CLAUSE_WHERE":
+        print(f"WHERE子句: {clause.clause}")
+    elif clause.part == "CLAUSE_SORT":
+        print(f"ORDER BY子句: {clause.clause}")
+    elif clause.part == "CLAUSE_LIMIT":
+        print(f"LIMIT子句: {clause.clause}")
 ```
 
 **输出**:
 ```
 数据源: [<DqlSourceExpr object>]
 列: [<DqlColumnExpr object>, ...]
-SELECT: ['u.user_id', 'u.username', '(SELECT COUNT(*) ...) as order_count']
-FROM: FROM users u
-WHERE: WHERE u.age > 18
-ORDER BY: ORDER BY u.username
-LIMIT: LIMIT 10
+SELECT子句: ['u.user_id', 'u.username', '(SELECT COUNT(*) ...) as order_count']
+FROM子句: FROM users u
+WHERE子句: WHERE u.age > 18
+ORDER BY子句: ORDER BY u.username
+LIMIT子句: LIMIT 10
 ```
 
 ---
@@ -337,7 +352,7 @@ LIMIT: LIMIT 10
 ### 场景2: 临时结果集（聚合查询）
 
 ```python
-from fastsqlparse import ParsedSQL
+from fastsqlparse import Parsed
 import json
 
 sql = """
@@ -353,16 +368,19 @@ WITH sales_summary AS (
 SELECT * FROM sales_summary WHERE total_sales > 1000
 """
 
-parsed = ParsedSQL(sql)
+parsed = Parsed(sql)
 
 # 获取Tokens
 tokens = parsed.tokens()
-print(f"Token数量: {len(tokens)}")
+print(f"TOKENS数量: {len(tokens)}")
+print(f"前5个TOKENS:")
+for i, token in enumerate(tokens[:5]):
+    print(f"  {i}: {token} (at: {token.value}, type: {token.type}, value: {token.value})")
 
 # 获取AST
 ast_str = parsed.AST()
 ast_obj = json.loads(ast_str)
-print(json.dumps(ast_obj, indent=2, ensure_ascii=False))
+print(json.dumps(ast_obj, indent=2, ensure_ascii=False)[:500] + "...")
 ```
 
 ---
@@ -385,8 +403,9 @@ SELECT 'TOTAL' as region, SUM(total) FROM region_sales
 
 # 使用Tokenizer进行快速词法分析
 tokens = ParsedQuery.tokenize(sql)
-for token_type, token_value, position in tokens:
-    print(f"Type: {token_type:15} | Value: {token_value[:30]:30} | Pos: {position}")
+print(f"Tokenizer结果 (前10个token):")
+for i, (token_type, token_value, position) in enumerate(tokens[:10]):
+    print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
 ```
 
 ---
@@ -412,14 +431,12 @@ FROM product_stats
 
 insert = ParsedInsert(sql)
 
-print("目标表:", insert.name)
-print("插入列:", insert.columns)
-print("有查询:", insert.query_load)
-
+print("目标表名:", insert.name)
+print("插入的列:", insert.columns)
+print("是否有查询加载:", insert.query_load)
 if insert.query:
-    print("查询类型:", type(insert.query))
-    print("查询来源:", insert.query.sources)
-    print("查询列:", insert.query.columns)
+    print("查询对象类型:", type(insert.query))
+    print("查询的sources:", insert.query.sources)
 ```
 
 ---
@@ -427,10 +444,10 @@ if insert.query:
 ### 场景5: 处理注释和格式化
 
 ```python
-from fastsqlparse import ParsedSQL, strip_note
+from fastsqlparse import Parsed, strip_note
 
 sql = """
--- 这是主注释
+-- 这是用户查询的主注释
 SELECT 
     u.user_id,  -- 用户ID
     u.username  -- 用户名
@@ -439,18 +456,18 @@ WHERE u.status = 'active'  -- 只查活跃用户
 """
 
 # 保留注释并格式化
-parsed_with_comments = ParsedSQL(sql, pure=False)
-print("保留注释:")
+parsed_with_comments = Parsed(sql, pure=False)
+print("保留注释的格式化结果:")
 print(parsed_with_comments.format())
 
-# 去除注释并格式化
-parsed_pure = ParsedSQL(sql, pure=True)
-print("\n去除注释:")
+# 去掉注释并格式化
+parsed_pure = Parsed(sql, pure=True)
+print("\n去掉注释的格式化结果:")
 print(parsed_pure.format())
 
 # 仅去除注释（不格式化）
 stripped = strip_note(sql)
-print("\n仅去注释:")
+print("\n仅去除注释:")
 print(stripped)
 ```
 
@@ -466,22 +483,23 @@ print(stripped)
 
 | 解析器 | 总耗时(100次) | 平均每次 | 相对速度 |
 |--------|--------------|---------|---------|
-| **fast-sqlparse** | 0.0596秒 | 0.60ms | **1.0x** (基准) |
-| sqlparse | 0.664秒 | 6.64ms | 11.14x 慢 |
-| sqlglot | 0.207秒 | 2.07ms | 3.48x |
+| **fast-pysqlparse** | 0.0170秒 | 0.17ms | **1.0x** (基准) |
+| sqlparse | 1.3040秒 | 13.04ms | **76.75x** 更快 |
+| sqlglot | 0.4283秒 | 4.28ms | **25.21x** 更快 |
 
 ### 大规模测试
 
 #### 测试1: 5000次解析
 - SQL长度: 639字符
-- 总耗时: 2.06秒
-- **PPS (Parses Per Second): 2422**
-- 平均每次: 0.41ms
+- 总耗时: 0.6084秒
+- **PPS (Parses Per Second): 8218.88**
+- 平均每次: 0.1217ms
 
 #### 测试2: 1000万字符SQL
 - SQL长度: 10,500,998字符
-- 总耗时: 6.54秒
-- **CPS (Characters Per Second): 1,606,110**
+- 总耗时: 1.4085秒
+- **CPS (Characters Per Second): 7,455,540**
+- 解析成功！
 
 ---
 
@@ -575,7 +593,7 @@ ast_obj = json.loads(ast_json_dic)
 
 ### 1. 选择合适的解析器
 
-- **通用SQL**: 使用 `ParsedSQL`
+- **通用SQL**: 使用 `Parsed`
 - **仅SELECT**: 使用 `ParsedQuery`（更快）
 - **仅INSERT**: 使用 `ParsedInsert`
 - **仅CTE**: 使用 `ParsedCTE`
@@ -589,10 +607,10 @@ ast_obj = json.loads(ast_json_dic)
 ### 3. 错误处理
 
 ```python
-from fastsqlparse import ParsedSQL
+from fastsqlparse import Parsed
 
 try:
-    parsed = ParsedSQL(invalid_sql)
+    parsed = Parsed(invalid_sql)
 except Exception as e:
     print(f"解析失败: {e}")
 ```
@@ -603,21 +621,21 @@ except Exception as e:
 
 ### Q1: 如何提取表名？
 ```python
-query = parsed.parseforest[0]
+query = parsed.parsedforest[0]
 for source in query.sources:
     print(source.table)  # 或查看source的属性
 ```
 
 ### Q2: 如何处理多语句SQL？
 ```python
-parsed = ParsedSQL("SELECT * FROM t1; SELECT * FROM t2;")
-for stmt in parsed.parseforest:
+parsed = Parsed("SELECT * FROM t1; SELECT * FROM t2;")
+for stmt in parsed.parsedforest:
     print(stmt)
 ```
 
 ### Q3: 如何获取子查询信息？
 ```python
-query = parsed.parseforest[0]
+query = parsed.parsedforest[0]
 if query.subquery:
     for subq in query.subquery:
         print(subq)

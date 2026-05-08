@@ -3,7 +3,13 @@ fast-sqlparse 功能测试和API演示
 所有测试都封装在独立的方法中
 """
 import fastsqlparse
-from fastsqlparse import ParsedSQL, ParsedQuery, ParsedCTE, ParsedInsert
+from fastsqlparse import (
+    Parsed,
+    ParsedOne,
+    ParsedQuery,
+    ParsedCTE,
+    ParsedInsert
+)
 import json
 import time
 
@@ -12,7 +18,7 @@ def test_scenario1_basic_query_with_subquery():
     """场景1：普通查询，包含子查询 - 提取source、columns、各种子句"""
     print("\n【场景1】普通查询，包含子查询")
     print("-" * 80)
-    
+
     sql = """
 SELECT 
     u.user_id,
@@ -23,19 +29,24 @@ WHERE u.age > 18
 ORDER BY u.username
 LIMIT 10
 """
-    
-    parsed = ParsedSQL(sql)
-    query = parsed.parseforest[0]
-    
+
+    parsed = Parsed(sql)
+    query = parsed.parsedforest[0]
+
     print(f"原始SQL:\n{sql}")
     print(f"\n提取的sources: {query.sources}")
     print(f"提取的columns: {query.columns}")
     print(f"SELECT子句: {query.clause_select}")
-    print(f"FROM子句: {query.clause_from}")
-    print(f"WHERE子句: {query.clause_condition}")
-    print(f"ORDER BY子句: {query.clause_sorting}")
-    print(f"LIMIT子句: {query.clause_limit}")
-    
+    for i, clause in enumerate(query.clauses):
+        if clause.part == "CLAUSE_FROM":
+            print(f"FROM子句: {clause.clause}")
+        elif clause.part == "CLAUSE_WHERE":
+            print(f"WHERE子句: {clause.clause}")
+        elif clause.part == "CLAUSE_SORT":
+            print(f"ORDER子句: {clause.clause}")
+        elif clause.part == "CLAUSE_LIMIT":
+            print(f"LIMIT子句: {clause.clause}")
+
     return query
 
 
@@ -43,9 +54,8 @@ def test_scenario2_cte_aggregation():
     """场景2：临时结果集（聚合查询）- 获取TOKENS和AST"""
     print("\n【场景2】临时结果集（聚合查询）")
     print("-" * 80)
-    
-    sql = """
-WITH sales_summary AS (
+
+    sql = """WITH sales_summary AS (
     SELECT 
         product_id,
         SUM(amount) as total_sales,
@@ -56,20 +66,20 @@ WITH sales_summary AS (
 )
 SELECT * FROM sales_summary WHERE total_sales > 1000
 """
-    
-    parsed = ParsedSQL(sql)
-    
+
+    parsed = ParsedOne(sql)
+
     print(f"原始SQL:\n{sql}")
     print(f"\nTOKENS数量: {len(parsed.tokens())}")
     print(f"前5个TOKENS:")
     for i, token in enumerate(parsed.tokens()[:5]):
-        print(f"  {i}: {token}")
-    
+        print(f"  {i}: {token} (at: {token.value}, type: {token.type}, value: {token.value})")
+
     print(f"\nAST (JSON格式):")
     ast_str = parsed.AST()
     ast_obj = json.loads(ast_str)
     print(json.dumps(ast_obj, indent=2, ensure_ascii=False)[:500] + "...")
-    
+
     return parsed
 
 
@@ -77,7 +87,7 @@ def test_scenario3_union_tokenizer():
     """场景3：临时结果集 + UNION子查询 - tokenizer测试"""
     print("\n【场景3】临时结果集 + UNION子查询 - tokenizer测试")
     print("-" * 80)
-    
+
     sql = """
 WITH region_sales AS (
     SELECT region, SUM(amount) as total
@@ -88,13 +98,13 @@ SELECT * FROM region_sales
 UNION ALL
 SELECT 'TOTAL' as region, SUM(total) FROM region_sales
 """
-    
+
     # 使用tokenizer进行词法分析
     tokens = ParsedQuery.tokenize(sql)
     print(f"Tokenizer结果 (前10个token):")
     for i, (token_type, token_value, position) in enumerate(tokens[:10]):
         print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
-    
+
     return tokens
 
 
@@ -102,7 +112,7 @@ def test_scenario4_insert_cte_select():
     """场景4：INSERT INTO ... CTE SELECT - 提取字段和query对象"""
     print("\n【场景4】INSERT INTO ... CTE SELECT")
     print("-" * 80)
-    
+
     sql = """
 INSERT INTO summary_table (product_id, total_amount, avg_amount)
 WITH product_stats AS (
@@ -116,7 +126,7 @@ WITH product_stats AS (
 SELECT product_id, total_amount, avg_amount
 FROM product_stats
 """
-    
+
     insert_parsed = ParsedInsert(sql)
     print(f"原始SQL:\n{sql}")
     print(f"\n目标表名: {insert_parsed.name}")
@@ -126,7 +136,7 @@ FROM product_stats
         print(f"查询对象类型: {type(insert_parsed.query)}")
         if hasattr(insert_parsed.query, 'sources'):
             print(f"查询的sources: {insert_parsed.query.sources}")
-    
+
     return insert_parsed
 
 
@@ -134,7 +144,7 @@ def test_scenario5_comments_and_formatting():
     """场景5：有注释的查询语句 - 去掉注释，格式化"""
     print("\n【场景5】有注释的查询语句 - 去掉注释，格式化")
     print("-" * 80)
-    
+
     sql = """
 -- 这是用户查询的主注释
 SELECT 
@@ -143,19 +153,19 @@ SELECT
 FROM users u  /* 用户表 */
 WHERE u.status = 'active'  -- 只查活跃用户
 """
-    
+
     # 不去掉注释
-    parsed_with_comments = ParsedSQL(sql, pure=False)
+    parsed_with_comments = Parsed(sql, pure=False)
     print(f"保留注释的格式化结果:\n{parsed_with_comments.format()}")
-    
+
     # 去掉注释
-    parsed_pure = ParsedSQL(sql, pure=True)
+    parsed_pure = Parsed(sql, pure=True)
     print(f"\n去掉注释的格式化结果:\n{parsed_pure.format()}")
-    
+
     # 使用strip_note函数
     stripped = fastsqlparse.strip_note(sql)
     print(f"\n仅去除注释:\n{stripped}")
-    
+
     return {
         'with_comments': parsed_with_comments,
         'pure': parsed_pure,
@@ -167,7 +177,7 @@ def test_performance_comparison():
     """性能测试1：与sqlparse/sqlglot对比"""
     print("\n【性能测试1】解析速度对比 (1359字符SQL)")
     print("-" * 80)
-    
+
     test_sql = """
 -- main query
 SELECT 
@@ -205,18 +215,18 @@ SELECT
 FROM category_sales cs
 LIMIT 50, 100
 """
-    
+
     print(f"测试SQL长度: {len(test_sql)} 字符")
-    
+
     # 测试fast-sqlparse
     start_time = time.time()
     for _ in range(100):
         parsed = ParsedQuery(test_sql, "test")
     fast_time = time.time() - start_time
     print(f"fast-sqlparse (100次): {fast_time:.4f}秒, 平均: {fast_time/100*1000:.2f}ms/次")
-    
+
     results = {'fast_sqlparse': fast_time}
-    
+
     # 测试sqlparse
     try:
         import sqlparse
@@ -230,7 +240,7 @@ LIMIT 50, 100
         results['speedup_vs_sqlparse'] = sqlparse_time/fast_time
     except ImportError:
         print("sqlparse未安装，跳过对比")
-    
+
     # 测试sqlglot
     try:
         import sqlglot
@@ -244,7 +254,7 @@ LIMIT 50, 100
         results['speedup_vs_sqlglot'] = sqlglot_time/fast_time
     except ImportError:
         print("sqlglot未安装，跳过对比")
-    
+
     return results
 
 
@@ -252,7 +262,7 @@ def test_performance_5000_iterations():
     """性能测试2：5000次解析"""
     print("\n【性能测试2】5000次解析SQL")
     print("-" * 80)
-    
+
     test_sql = """
 SELECT 
     'Monthly Sales Report' AS report_type,
@@ -270,21 +280,21 @@ SELECT
     (SELECT AVG(avg_order_value) FROM monthly_sales WHERE year = ms.year AND month = ms.month) AS overall_avg_order_value
 FROM monthly_sales ms
 """
-    
+
     print(f"SQL长度: {len(test_sql)} 字符")
     iterations = 5000
-    
+
     start_time = time.time()
     for _ in range(iterations):
-        parsed = ParsedSQL(test_sql)
+        parsed = Parsed(test_sql)
     total_time = time.time() - start_time
     pps = iterations / total_time
-    
+
     print(f"总耗时: {total_time:.4f}秒")
     print(f"解析次数: {iterations}")
     print(f"PPS (Parse Per Second): {pps:.2f}")
     print(f"平均每次: {total_time/iterations*1000:.4f}ms")
-    
+
     return {
         'iterations': iterations,
         'sql_length': len(test_sql),
@@ -298,7 +308,7 @@ def test_performance_large_sql():
     """性能测试3：1000万字符SQL解析"""
     print("\n【性能测试3】1000万字符SQL解析")
     print("-" * 80)
-    
+
     # 生成大SQL
     base_query = """
 WITH 
@@ -595,17 +605,17 @@ GROUP BY cohort.cohort_month, active.months_since, cohort.total_users_in_cohort
 ORDER BY report_type, username
 LIMIT 1000;
 """
-    
+
     large_sql_parts = []
     for i in range(1000):
         large_sql_parts.append(base_query)
-    
+
     large_sql = ";\n".join(large_sql_parts)
     print(f"大SQL长度: {len(large_sql):,} 字符")
-    
+
     start_time = time.time()
     try:
-        parsed_large = ParsedSQL(large_sql)
+        parsed_large = Parsed(large_sql)
         large_time = time.time() - start_time
         cps = len(large_sql) / large_time
         
@@ -648,9 +658,8 @@ def run_all_tests():
     print("\n\n" + "=" * 80)
     print("二、性能验证")
     print("=" * 80)
-    
     # 性能测试
-    perf_results = {}
+    perf_results = dict()
     perf_results['comparison'] = test_performance_comparison()
     perf_results['5000_iterations'] = test_performance_5000_iterations()
     perf_results['large_sql'] = test_performance_large_sql()

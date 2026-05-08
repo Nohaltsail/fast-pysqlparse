@@ -1,41 +1,64 @@
-# SQL Parser Library:
+# fast-pysqlparse: High-Performance SQL Parsing Library
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)]()
+
+
+[README.md (chinese)](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/README_CN.md)
+
 A high-performance, cross-platform SQL parsing library, designed to handle the most complex SQL queries with ease.
 
-### Overview:
+## Overview
 
 This library provides a robust set of tools for parsing and analyzing SQL statements. Built with a core engine in C++17 for maximum performance, it offers native Python bindings, making it the ideal choice for data-intensive applications where speed and accuracy are critical.
 
 It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
 
-### Features:
+## Features
 
-Fast SQL Parsing: Leverages a high-performance C++17 core to parse SQL statements rapidly.
+- **Fast SQL Parsing**: Leverages a high-performance C++17 core to parse SQL statements rapidly
+- **Cross-Platform**: Compiled into native extensions (.pyd for Windows, .so for Linux)
+- **Comprehensive SQL Support**: Supports a wide range of SQL statements, including:
+  - SELECT (with complex JOIN, WHERE, GROUP BY, subqueries, etc.)
+  - INSERT
+  - Data Definition Language (CREATE)
+  - VIEW
+  - DELETE
+  - UPDATE
+  - Common Table Expressions (CTEs), including nested CTEs
+- **Abstract Syntax Tree (AST)**: Generates a detailed JSON representation of the parsed SQL AST for easy traversal and analysis
+- **SQL Formatting**: Automatically reformats messy SQL into a clean, readable structure
+- **Table Lineage Parsing**: Automatically traces and reveals the source-to-target relationships between tables (data lineage)
+- **Tokenization**: Breaks down SQL statements into their fundamental tokens for lexical analysis
+- **Python API**: A clean and intuitive Python library built around the high-speed native extension
 
-Cross-Platform: Compiled into native extensions (.pyd for Windows, .so for Linux).
-Comprehensive SQL Support: Supports a wide range of SQL statements, including:
+## Performance
 
-        SELECT (with complex JOIN, WHERE, GROUP BY, sub query, etc.)
-        INSERT
-        Data Definition Language (CREATE)
-        VIEW
-        DELETE
-        UPDATE
-        Common Table Expressions (CTEs), including nested CTEs.
-        
-Abstract Syntax Tree (AST): Generates a detailed JSON representation of the parsed SQL AST for easy traversal and analysis.
-
-SQL Formatting: Automatically reformats messy SQL into a clean, readable structure.
-
-Table Lineage Parsing: Automatically traces and reveals the source-to-target relationships between tables (data lineage).
-
-Tokenization: Breaks down SQL statements into their fundamental tokens for lexical analysis.
-
-Python API: A clean and intuitive Python library built around the high-speed native extension.
-
-Performance:
 This library is engineered for speed. By moving the computationally intensive parsing work to a native C++ layer, it significantly outperforms pure-Python parsing libraries, especially when dealing with large, complex SQL scripts.
 
-### Installation:
+### Benchmark Results
+
+#### Test 1: Comparison with sqlparse/sqlglot (1359 char SQL, 100 iterations)
+| Parser | Total Time | Avg per Parse | Speedup |
+|--------|-----------|---------------|---------|
+| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0x** (baseline) |
+| sqlparse | 1.3040s | 13.04ms | **76.75x** faster |
+| sqlglot | 0.4283s | 4.28ms | **25.21x** faster |
+
+#### Test 2: 5000 Iterations
+- SQL Length: 639 characters
+- Total Time: 0.6084s
+- **PPS (Parses Per Second): 8218.88**
+- Average per parse: 0.1217ms
+
+#### Test 3: 10 Million Character SQL
+- SQL Length: 10,500,998 characters
+- Total Time: 1.4085s
+- **CPS (Characters Per Second): 7,455,540**
+- Parse successful!
+
+## Installation
 
 ```shell
 pip install fast-pysqlparse
@@ -52,12 +75,9 @@ From Source:
 
 ### Quick Start
 
-```shell
-pip install fast-pysqlparse
-```
 
 ```python
-from fastsqlparse import ParsedSQL
+from fastsqlparse import Parsed
 from fastsqlparse.statement import ParsedQuery
 
 if __name__ == '__main__':
@@ -103,7 +123,7 @@ LIMIT 50, 100"""
     print("sql length: ", sql_len)
 
     # parse sql statements to SQL object
-    sql_stmt = ParsedSQL(sql)
+    sql_stmt = Parsed(sql)
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
@@ -121,26 +141,31 @@ LIMIT 50, 100"""
 
 ```
 
+## When to Use Which Parser
 
-### When to Use Which Parser
+| **Scenario** | **Parser to Use**  |
+|--------------|--------------------|
+| SQL statement type is unknown or you don't want to specify the type | `Parsed/ParsedOne` |
+| Multiple SQL statements separated by `;` (script execution) | `Parsed`           |
+| SELECT / query statement | `ParsedQuery`      |
+| INSERT statement | `ParsedInsert`     |
+| DELETE statement | `ParsedDelete`     |
+| UPDATE statement | `ParsedUpdate`     |
+| CREATE TABLE statement | `ParsedCreate`     |
+| CREATE VIEW statement | `ParsedView`       |
+| CTE (WITH clause) statement | `ParsedCTE`        |
 
-| **Scenario** | **Parser to Use**        |
-|--------------|--------------------------|
-| SQL statement type is unknown or you don't want to specify the type | `parser.ParsedSQL`       |
-| Multiple SQL statements separated by `;` (script execution) | `parser.ParsedSQL`       |
-| SELECT / query statement | `statement.ParsedQuery`  |
-| INSERT statement | `statement.ParsedInsert` |
-| DELETE statement | `statement.ParsedDelete` |
-| UPDATE statement | `statement.ParsedUpdate` |
-| CREATE TABLE statement | `statement.ParsedCreate` |
-| CREATE VIEW statement | `statement.ParsedView`   |
-| CTE (WITH clause) statement | `statement.ParsedCTE`    |
+> **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `Parsed`. The type-specific parsers are designed for single, known-type statements only.
 
-> **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `ParsedSQL`. The type-specific parsers are designed for single, known-type statements only.
+## Documentation
 
-### Detail DOC
-[zh_CN](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/API_DOCUMENTATION.md)
+For complete API documentation, see: [API_DOC.md](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/API_DOC.md)
 
-### Contributing:
+## Contributing
+
 Contributions are welcome! Please feel free to submit pull requests, report bugs, or suggest new features.
+
+## License
+
+Apache-2.0
 
