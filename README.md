@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)]()
 
 
-[README.md (chinese)](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/README_CN.md)
+[README.md (Chinese)](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/README_CN.md)
 
 A high-performance, cross-platform SQL parsing library, designed to handle the most complex SQL queries with ease.
 
