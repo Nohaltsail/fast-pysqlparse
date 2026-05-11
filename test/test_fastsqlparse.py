@@ -38,6 +38,7 @@ LIMIT 10
     print(f"提取的columns: {query.columns}")
     print(f"SELECT子句: {query.clause_select}")
     for i, clause in enumerate(query.clauses):
+        print(clause)
         if clause.part == "CLAUSE_FROM":
             print(f"FROM子句: {clause.clause}")
         elif clause.part == "CLAUSE_WHERE":
@@ -73,7 +74,7 @@ SELECT * FROM sales_summary WHERE total_sales > 1000
     print(f"\nTOKENS数量: {len(parsed.tokens())}")
     print(f"前5个TOKENS:")
     for i, token in enumerate(parsed.tokens()[:5]):
-        print(f"  {i}: {token} (at: {token.value}, type: {token.type}, value: {token.value})")
+        print(token)
 
     print(f"\nAST (JSON格式):")
     ast_str = parsed.AST()
@@ -102,7 +103,7 @@ SELECT 'TOTAL' as region, SUM(total) FROM region_sales
     # 使用tokenizer进行词法分析
     tokens = ParsedQuery.tokenize(sql)
     print(f"Tokenizer结果 (前10个token):")
-    for i, (token_type, token_value, position) in enumerate(tokens[:10]):
+    for i, (token_value, token_type, position) in enumerate(tokens[:10]):
         print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
 
     return tokens
@@ -618,11 +619,11 @@ LIMIT 1000;
         parsed_large = Parsed(large_sql)
         large_time = time.time() - start_time
         cps = len(large_sql) / large_time
-        
+
         print(f"总耗时: {large_time:.4f}秒")
         print(f"CPS (Characters Per Second): {cps:,.2f}")
         print(f"解析成功！")
-        
+
         return {
             'sql_length': len(large_sql),
             'total_time': large_time,
@@ -633,28 +634,28 @@ LIMIT 1000;
         large_time = time.time() - start_time
         print(f"解析失败: {str(e)}")
         print(f"耗时: {large_time:.4f}秒")
-        
+
         return {
             'sql_length': len(large_sql),
             'total_time': large_time,
             'success': False,
             'error': str(e)
         }
-    
+
 
 def run_all_tests():
     """运行所有测试"""
     print("=" * 80)
     print("一、功能展示")
     print("=" * 80)
-    
+
     # 功能测试
     test_scenario1_basic_query_with_subquery()
     test_scenario2_cte_aggregation()
     test_scenario3_union_tokenizer()
     test_scenario4_insert_cte_select()
     test_scenario5_comments_and_formatting()
-    
+
     print("\n\n" + "=" * 80)
     print("二、性能验证")
     print("=" * 80)
