@@ -25,6 +25,7 @@ class ParsedInsert(object):
         "raw",
         "name",
         "query_load",
+        "cte",
         "query",
         "columns",
         "values",

@@ -7,7 +7,6 @@ from fastsqlparse import (
     Parsed,
     ParsedOne,
     ParsedQuery,
-    ParsedCTE,
     ParsedInsert
 )
 import json
@@ -16,7 +15,7 @@ import time
 
 def test_scenario1_basic_query_with_subquery():
     """场景1：普通查询，包含子查询 - 提取source、columns、各种子句"""
-    print("\n【场景1】普通查询，包含子查询")
+    print("\n【场景1】解析体基本结构：使用普通查询，包含子查询")
     print("-" * 80)
 
     sql = """
@@ -30,14 +29,16 @@ ORDER BY u.username
 LIMIT 10
 """
 
-    parsed = Parsed(sql)
-    query = parsed.parsedforest[0]
-
-    print(f"原始SQL:\n{sql}")
-    print(f"\n提取的sources: {query.sources}")
-    print(f"提取的columns: {query.columns}")
-    print(f"SELECT子句: {query.clause_select}")
-    for i, clause in enumerate(query.clauses):
+    parsed_multi = Parsed(sql)
+    query: ParsedQuery = parsed_multi.parsedforest[0]
+    parsed = query.parsed
+    print(f"parsed: {parsed}")
+    print(f"原始SQL:\n{query.raw}")
+    print(f"\n提取的sources: {parsed.sources}")
+    print(f"提取的columns: {parsed.columns}")
+    print(f"SELECT子句: {parsed.clause_select}")
+    print(f"子查询: {parsed.subquery}")
+    for i, clause in enumerate(parsed.clauses):
         print(clause)
         if clause.part == "CLAUSE_FROM":
             print(f"FROM子句: {clause.clause}")
@@ -69,6 +70,12 @@ SELECT * FROM sales_summary WHERE total_sales > 1000
 """
 
     parsed = ParsedOne(sql)
+    if parsed.type == "query":
+        query: ParsedQuery = parsed.parsed
+        print(f"parsed_query: {query}")
+        print(f"CTEs: {query.cte}")
+        print(f"common tables: {query.cte.common_tables}")
+        print(f"expressions: {query.cte.expressions}")
 
     print(f"原始SQL:\n{sql}")
     print(f"\nTOKENS数量: {len(parsed.tokens())}")
@@ -106,6 +113,14 @@ SELECT 'TOTAL' as region, SUM(total) FROM region_sales
     for i, (token_value, token_type, position) in enumerate(tokens[:10]):
         print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
 
+    print("++++++++++++++++++++++++++++++")
+    # query.parsed 结构分析
+    parsed_query = ParsedQuery(sql, "test_table")
+    parsed = parsed_query.parsed
+    print(f"query.parsed: {parsed}")
+    if parsed.T == "UNIONS":
+        for e in parsed.unions:
+            print(f"{e}")
     return tokens
 
 
@@ -137,11 +152,55 @@ FROM product_stats
         print(f"查询对象类型: {type(insert_parsed.query)}")
         if hasattr(insert_parsed.query, 'sources'):
             print(f"查询的sources: {insert_parsed.query.sources}")
+    print(f"insert_parsed.cte: {insert_parsed.cte}")
+
+    print("++++++++++++++++++++++++++++++")
+    parsed_query: ParsedQuery = insert_parsed.query
+    print(f"parsed_query: {parsed_query}")
+    print(f"parsed_query.parsed: {parsed_query.parsed}")
+    print(f"parsed_query.cte: {parsed_query.cte}")
+    print(f"parsed_query.cte.common_tables: {parsed_query.cte.common_tables}")
+    print(f"parsed_query.cte.expressions: {parsed_query.cte.expressions}")
+    print(f"parsed_query.parsed.columns: {parsed_query.parsed.columns}")
 
     return insert_parsed
 
 
-def test_scenario5_comments_and_formatting():
+def test_scenario5_insert_cte_select():
+    """场景4：INSERT INTO ... CTE SELECT - 提取字段和query对象"""
+    print("\n【场景4】INSERT INTO ... CTE SELECT")
+    print("-" * 80)
+
+    sql = """
+WITH product_stats AS (
+    SELECT 
+        product_id,
+        SUM(amount) as total_amount,
+        AVG(amount) as avg_amount
+    FROM orders
+    GROUP BY product_id
+)
+INSERT INTO summary_table (product_id, total_amount, avg_amount)
+SELECT product_id, total_amount, avg_amount
+FROM product_stats
+"""
+
+    insert_parsed = ParsedInsert(sql)
+    print(f"insert_parsed.cte: {insert_parsed.cte}")
+    for cte in insert_parsed.cte.units:
+        print(f"cte: {cte}")
+
+    print("++++++++++++++++++++++++++++++")
+    parsed_query: ParsedQuery = insert_parsed.query
+    print(f"parsed_query: {parsed_query}")
+    print(f"parsed_query.parsed: {parsed_query.parsed}")
+    print(f"parsed_query.cte: {parsed_query.cte}")
+    print(f"parsed_query.available_cte: {parsed_query.available_cte()}")
+
+    return insert_parsed
+
+
+def test_scenario6_comments_and_formatting():
     """场景5：有注释的查询语句 - 去掉注释，格式化"""
     print("\n【场景5】有注释的查询语句 - 去掉注释，格式化")
     print("-" * 80)
@@ -306,7 +365,7 @@ FROM monthly_sales ms
 
 
 def test_performance_large_sql():
-    """性能测试3：1000万字符SQL解析"""
+    """性能测试3：1000万字符SQL（10M）解析"""
     print("\n【性能测试3】1000万字符SQL解析")
     print("-" * 80)
 
@@ -614,33 +673,87 @@ LIMIT 1000;
     large_sql = ";\n".join(large_sql_parts)
     print(f"大SQL长度: {len(large_sql):,} 字符")
 
+    # 测试fast-sqlparse
     start_time = time.time()
     try:
         parsed_large = Parsed(large_sql)
-        large_time = time.time() - start_time
-        cps = len(large_sql) / large_time
+        fast_time = time.time() - start_time
+        fast_cps = len(large_sql) / fast_time if fast_time > 0 else 0
 
-        print(f"总耗时: {large_time:.4f}秒")
-        print(f"CPS (Characters Per Second): {cps:,.2f}")
-        print(f"解析成功！")
+        print(f"fast-sqlparse 总耗时: {fast_time:.4f}秒")
+        print(f"fast-sqlparse CPS (Characters Per Second): {fast_cps:,.2f}")
+        print(f"fast-sqlparse 解析成功！")
 
-        return {
+        results = {
             'sql_length': len(large_sql),
-            'total_time': large_time,
-            'cps': cps,
+            'fast_sqlparse_time': fast_time,
+            'fast_sqlparse_cps': fast_cps,
             'success': True
         }
     except Exception as e:
-        large_time = time.time() - start_time
-        print(f"解析失败: {str(e)}")
-        print(f"耗时: {large_time:.4f}秒")
+        fast_time = time.time() - start_time
+        print(f"fast-sqlparse 解析失败: {str(e)}")
+        print(f"fast-sqlparse 耗时: {fast_time:.4f}秒")
 
-        return {
+        results = {
             'sql_length': len(large_sql),
-            'total_time': large_time,
+            'fast_sqlparse_time': fast_time,
             'success': False,
             'error': str(e)
         }
+
+    # 测试sqlparse
+    try:
+        import sqlparse
+        start_time = time.time()
+        parsed_sqlparse = sqlparse.parse(large_sql)
+        sqlparse_time = time.time() - start_time
+        sqlparse_cps = len(large_sql) / sqlparse_time if sqlparse_time > 0 else 0
+
+        print(f"\nsqlparse 总耗时: {sqlparse_time:.4f}秒")
+        print(f"sqlparse CPS (Characters Per Second): {sqlparse_cps:,.2f}")
+        print(f"sqlparse 解析成功！")
+        print(f"相比fast-sqlparse加速比: {sqlparse_time/fast_time:.2f}x")
+
+        results['sqlparse_time'] = sqlparse_time
+        results['sqlparse_cps'] = sqlparse_cps
+        results['speedup_vs_sqlparse'] = sqlparse_time/fast_time
+    except ImportError:
+        print("\nsqlparse未安装，跳过对比")
+    except Exception as e:
+        sqlparse_time = time.time() - start_time
+        print(f"\nsqlparse 解析失败: {str(e)}")
+        print(f"sqlparse 耗时: {sqlparse_time:.4f}秒")
+        results['sqlparse_time'] = sqlparse_time
+        results['sqlparse_error'] = str(e)
+
+    # 测试sqlglot
+    try:
+        import sqlglot
+        start_time = time.time()
+        # 注意：对于超大SQL，可能需要分割处理或调整配置
+        parsed_sqlglot = sqlglot.parse(large_sql)
+        sqlglot_time = time.time() - start_time
+        sqlglot_cps = len(large_sql) / sqlglot_time if sqlglot_time > 0 else 0
+
+        print(f"\nsqlglot 总耗时: {sqlglot_time:.4f}秒")
+        print(f"sqlglot CPS (Characters Per Second): {sqlglot_cps:,.2f}")
+        print(f"sqlglot 解析成功！")
+        print(f"相比fast-sqlparse加速比: {sqlglot_time/fast_time:.2f}x")
+
+        results['sqlglot_time'] = sqlglot_time
+        results['sqlglot_cps'] = sqlglot_cps
+        results['speedup_vs_sqlglot'] = sqlglot_time/fast_time
+    except ImportError:
+        print("\nsqlglot未安装，跳过对比")
+    except Exception as e:
+        sqlglot_time = time.time() - start_time
+        print(f"\nsqlglot 解析失败: {str(e)}")
+        print(f"sqlglot 耗时: {sqlglot_time:.4f}秒")
+        results['sqlglot_time'] = sqlglot_time
+        results['sqlglot_error'] = str(e)
+
+    return results
 
 
 def run_all_tests():
@@ -654,7 +767,8 @@ def run_all_tests():
     test_scenario2_cte_aggregation()
     test_scenario3_union_tokenizer()
     test_scenario4_insert_cte_select()
-    test_scenario5_comments_and_formatting()
+    test_scenario5_insert_cte_select()
+    test_scenario6_comments_and_formatting()
 
     print("\n\n" + "=" * 80)
     print("二、性能验证")
@@ -664,7 +778,7 @@ def run_all_tests():
     perf_results['comparison'] = test_performance_comparison()
     perf_results['5000_iterations'] = test_performance_5000_iterations()
     perf_results['large_sql'] = test_performance_large_sql()
-    
+
     print("\n" + "=" * 80)
     print("测试完成！")
     print("=" * 80)
