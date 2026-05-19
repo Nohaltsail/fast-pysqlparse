@@ -40,22 +40,22 @@ This library is engineered for speed. By moving the computationally intensive pa
 ### Benchmark Results
 
 #### Test 1: Comparison with sqlparse/sqlglot (1359 char SQL, 100 iterations)
-| Parser | Total Time | Avg per Parse | Speedup |
-|--------|-----------|---------------|---------|
-| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0x** (baseline) |
-| sqlparse | 1.3040s | 13.04ms | **76.75x** faster |
-| sqlglot | 0.4283s | 4.28ms | **25.21x** faster |
+| Parser | Total Time | Avg per Parse | Speedup              |
+|--------|-----------|---------------|----------------------|
+| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0 x** (baseline) |
+| sqlparse | 1.3040s | 13.04ms | **75 x** faster      |
+| sqlglot | 0.4283s | 4.28ms | **25 x** faster      |
 
 #### Test 2: 5000 Iterations
-- SQL Length: 639 characters
-- Total Time: 0.6084s
-- **PPS (Parses Per Second): 8218.88**
-- Average per parse: 0.1217ms
+- SQL Length: 600+ characters
+- Total Time: 0.60s
+- **PPS (Parses Per Second): 8000+**
+- Average per parse: 0.1ms~0.15ms
 
 #### Test 3: 10 Million Character SQL
-- SQL Length: 10,500,998 characters
-- Total Time: 1.4085s
-- **CPS (Characters Per Second): 7,455,540**
+- SQL Length: 10,000,000 characters
+- Total Time: 1.40s
+- **CPS (Characters Per Second): ~7,500,000**
 - Parse successful!
 
 ## Installation
