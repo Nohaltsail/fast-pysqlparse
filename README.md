@@ -2,7 +2,7 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)]()
+[![License](https://img.shields.io/badge/license-MIT-purple)]()
 
 
 [README.md (Chinese)](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/README_CN.md)
@@ -167,5 +167,11 @@ Contributions are welcome! Please feel free to submit pull requests, report bugs
 
 ## License
 
-Apache-2.0
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### Note on Dynamic Libraries
+
+The pre-compiled dynamic library files (`.pyd`/`.so`) included in this project are currently distributed as binary-only. The C++ source code for these libraries will be made publicly available in a future release.
+
+For more information, please refer to the [LICENSE](LICENSE) file.
 

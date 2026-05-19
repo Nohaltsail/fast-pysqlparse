@@ -770,4 +770,8 @@ https://github.com/Nohaltsail/fast-pysqlparse
 
 ## 许可证
 
-Apache-2.0
+本项目采用 **MIT 许可证** - 详情请参见 [LICENSE](LICENSE) 文件。
+
+### 关于动态库的说明
+
+本项目中包含的预编译动态链接库文件（Windows 的 `.pyd` 和 Linux 的 `.so`）目前以二进制形式分发。这些库文件的 C++ 源代码将在未来版本中公开。

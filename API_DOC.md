@@ -771,4 +771,8 @@ https://github.com/Nohaltsail/fast-pysqlparse
 
 ## License
 
-Apache-2.0
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### Note on Dynamic Libraries
+
+The pre-compiled dynamic library files (`.pyd`/`.so`) included in this project are currently distributed as binary-only. The C++ source code for these libraries will be made publicly available in a future release.

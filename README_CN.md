@@ -2,7 +2,7 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)]()
+[![License](https://img.shields.io/badge/license-MIT-purple)]()
 
 一个高性能、跨平台的SQL解析库，专为处理最复杂的SQL查询而设计。基于C++17核心引擎构建，提供原生Python绑定，性能远超纯Python解析方案。
 
@@ -1016,7 +1016,13 @@ pytest test/
 
 ## 许可证
 
-Apache-2.0 License
+本项目采用 **MIT 许可证** - 详情请参见 [LICENSE](LICENSE) 文件。
+
+### 关于动态库的说明
+
+本项目中包含的预编译动态链接库文件（Windows 的 `.pyd` 和 Linux 的 `.so`）目前以二进制形式分发。这些库文件的 C++ 源代码将在未来版本中公开。
+
+更多信息请参阅 [LICENSE](LICENSE) 文件。
 
 
 ---
