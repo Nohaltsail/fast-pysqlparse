@@ -29,9 +29,9 @@ parsed = Parsed(sql)
 
 # 获取解析结果
 query = parsed.parsedforest[0]
-print(query.sources)    # 数据源
-print(query.columns)    # 列信息
-print(query.format())   # 格式化输出
+print(query.parsed.sources)    # 数据源
+print(query.parsed.columns)    # 列信息
+print(parsed.format())         # 格式化输出
 ```
 
 ---
@@ -79,35 +79,72 @@ tokens = parsed.tokens()
 
 ---
 
+### 1.1. ParsedOne - 单语句SQL解析器
+
+**功能**: 解析单个SQL语句，自动识别类型并返回对应的解析对象
+
+**参数**:
+- `sql_statements` (str): SQL语句字符串
+
+**主要属性**:
+- `parsed`: AbstractParsed - 解析后的结构对象（可能是ParsedQuery、ParsedInsert等）
+- `type`: str - 语句类型（"query", "insert", "update", "delete", "create", "view"等）
+
+**主要方法**:
+- `tokens()`: List[Token] - 获取Token列表
+- `AST()`: str - 获取JSON格式的AST
+- `format(indent: str = "    ")`: str - 格式化SQL
+
+**示例**:
+```python
+from fastsqlparse import ParsedOne, ParsedQuery
+
+sql = "SELECT * FROM users WHERE age > 18"
+parsed = ParsedOne(sql)
+
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    print("数据源:", query.parsed.sources)
+    print("列:", query.parsed.columns)
+elif parsed.type == "insert":
+    # 处理INSERT语句
+    pass
+```
+
+---
+
 ### 2. ParsedQuery - SELECT查询解析器
 
 **功能**: 专门解析SELECT查询语句，提取查询子句和元数据
 
 **参数**:
 - `statement` (str): SELECT语句
-- `name` (str): 查询名称
+- `name` (str): 查询名称标识
 - `pure` (bool, default=False): 是否去除注释
 
 **主要属性**:
-- `sources`: 数据源列表（FROM/JOIN的表）
-- `columns`: 选择的列列表
-- `clause_select`: SELECT子句内容
-- `clauses`: 子句列表
-  - FROM子句内容
-  - WHERE子句内容
-  - GROUP BY/HAVING子句
-  - ORDER BY子句
-  - LIMIT子句
-- `parent`: Parsed父对象
-- `cte`: CTE映射字典
-- `unions`: UNION查询列表
-- `subquery`: 子查询信息
-- `level`: 嵌套层级
+- `name`: str - 语句名称标识
+- `statement` - 查询语句
+- `level` - 嵌套层级
+- `super`: str - 父级名称标识
+- `parent`: ParsedAbstract - 父级解析对象
+- `cte`: CommonTableExpr - 公共表表达式（SELECT查询级别的CTE）。注意：此对象与ParsedInsert.cte类型不同，可通过 `.common_tables` 和 `.expressions` 等属性访问。
+  - `common_tables`: List[str] - 公共表列表
+  - `expressions`: Dict[str, ParsedCTE] - 表达式字典
+- `parsed`: QueryStatement - 解析后的结构对象
+  - `unions`: List[ParsedQuery | str] - UNION查询列表（当T=="UNIONS"时）
+  - 或：
+    - `sources`: List[DqlSourceExpr] - 数据源列表
+    - `columns`: List[DqlColumnExpr] - 列列表
+    - `clause_select`: List[str] - SELECT子句内容
+    - `clauses`: List[DqlClause] - 所有子句
+    - `subquery`: Dict[str, ParsedQuery] - 子查询字典
 
 **主要方法**:
 - `format(indent, init_indent)`: 格式化查询
 - `ast()`: 生成AST
 - `tokens()`: 获取Tokens
+- `available_cte()`: 获取当前查询作用域内可用的所有CTE。这些CTE通常来自于祖先ParsedQuery/ParsedInsert对象，包括当前查询和父级查询中定义的WITH子句。返回一个字典，键为CTE名称，值为ParsedCTE对象。
 - `tokenize(statement)`: 静态方法，快速词法分析
 
 **示例**:
@@ -126,11 +163,12 @@ LIMIT 10
 """
 
 query = ParsedQuery(sql, "user_orders")
+parsed = query.parsed
 
 # 提取信息
-print("数据源:", query.sources)
-print("列:", query.columns)
-for i, clause in enumerate(query.clauses):
+print("数据源:", parsed.sources)
+print("列:", parsed.columns)
+for i, clause in enumerate(parsed.clauses):
     if clause.part == "CLAUSE_FROM":
         print(f"FROM子句: {clause.clause}")
     elif clause.part == "CLAUSE_WHERE":
@@ -193,10 +231,17 @@ WITH RECURSIVE cte AS (
 SELECT * FROM cte
 """
 
-ctes = ParsedQuery(sql, 'test').cte
-for cte_name in ctes:
-    print("CTE名称:", cte_name)
-    print("CTE语句:", ctes[cte_name].format())
+query = ParsedQuery(sql, 'test')
+if query.cte:
+    print("CTEs对象:", query.cte)
+    # common_tables 和 expressions 是 CommonTableExpr 对象的属性
+    if hasattr(query.cte, 'common_tables'):
+        print("common tables:", query.cte.common_tables)
+    if hasattr(query.cte, 'expressions'):
+        print("expressions:", query.cte.expressions)
+        for cte_name in query.cte.expressions:
+            print("CTE名称:", cte_name)
+            print("CTE语句:", query.cte.expressions[cte_name].format())
 ```
 
 ---
@@ -210,14 +255,15 @@ for cte_name in ctes:
 - `pure` (bool, default=False): 是否去除注释
 
 **主要属性**:
-- `name`: 目标表名
-- `columns`: 插入的列列表
-- `values`: 插入的值
-- `query`: 查询对象（INSERT...SELECT时）
-- `query_load`: 是否有查询加载
-- `main_stmt`: 主语句
-- `cte_stmt`: CTE语句
-- `query_stmt`: 查询语句
+- `name`: str - 目标表名
+- `columns`: List[str] - 插入的列列表
+- `values`: List[str] - 插入的值
+- `query`: ParsedQuery - 查询对象（INSERT...SELECT时）
+- `query_load`: bool - 是否有查询加载
+- `main_stmt`: str - 主语句
+- `cte`: ParsedWithStmt - CTE解析对象（INSERT语句级别的CTE，定义在INSERT之前的WITH子句）。注意：此对象的属性与ParsedQuery.cte不同，主要通过 `.units` 访问CTE单元列表。
+- `cte_stmt`: str - CTE语句
+- `query_stmt`: str - 查询语句
 
 **主要方法**:
 - `format(indent, init_indent)`: 格式化
@@ -227,7 +273,7 @@ for cte_name in ctes:
 
 **示例**:
 ```python
-from fastsqlparse import ParsedInsert
+from fastsqlparse import ParsedInsert, ParsedQuery
 
 sql1 = "INSERT INTO users (id, name) VALUE (1, 'Alice')"
 insert1 = ParsedInsert(sql1)
@@ -248,12 +294,21 @@ SELECT product_id, total FROM stats sts
 insert2 = ParsedInsert(sql2)
 print("表名:", insert2.name)
 print("有查询:", insert2.query_load)
+# 注意：insert2.cte 是 ParsedWithStmt 类型，与 query.cte (CommonTableExpr) 不同
+if insert2.cte:
+    print("INSERT级别的CTE单元:", insert2.cte.units)
 if insert2.query:
-    for source in insert2.query.sources:
-        print("子句:", source.raw)
-        print("表:", source.table)
-        print("别名:", source.alias)
-
+    print("查询对象类型:", type(insert2.query))
+    parsed_query: ParsedQuery = insert2.query
+    print("parsed_query.parsed:", parsed_query.parsed)
+    # parsed_query.cte 是 CommonTableExpr 类型，有 common_tables 和 expressions 属性
+    print("parsed_query.cte:", parsed_query.cte)
+    if parsed_query.cte:
+        # common_tables 和 expressions 是 CommonTableExpr 对象的属性
+        if hasattr(parsed_query.cte, 'common_tables'):
+            print("common_tables:", parsed_query.cte.common_tables)
+        if hasattr(parsed_query.cte, 'expressions'):
+            print("expressions:", parsed_query.cte.expressions)
 ```
 
 ---
@@ -305,7 +360,7 @@ create = ParsedCreate(sql)
 ### 场景1: 普通查询（含子查询）
 
 ```python
-from fastsqlparse import Parsed
+from fastsqlparse import Parsed, ParsedQuery
 
 sql = """
 SELECT 
@@ -318,14 +373,17 @@ ORDER BY u.username
 LIMIT 10
 """
 
-parsed = Parsed(sql)
-query = parsed.parsedforest[0]
+parsed_multi = Parsed(sql)
+query: ParsedQuery = parsed_multi.parsedforest[0]
+parsed = query.parsed
 
 # 提取关键信息
-print("数据源:", query.sources)
-print("列:", query.columns)
-print("SELECT子句:", query.clause_select)
-for clause in query.clauses:
+print("parsed:", parsed)
+print("数据源:", parsed.sources)
+print("列:", parsed.columns)
+print("SELECT子句:", parsed.clause_select)
+print("子查询:", parsed.subquery)
+for clause in parsed.clauses:
     if clause.part == "CLAUSE_FROM":
         print(f"FROM子句: {clause.clause}")
     elif clause.part == "CLAUSE_WHERE":
@@ -338,9 +396,12 @@ for clause in query.clauses:
 
 **输出**:
 ```
-数据源: [<DqlSourceExpr object>]
-列: [<DqlColumnExpr object>, ...]
+parsed: QueryStatement(type=SELECT)
+
+数据源: [DqlSourceExpr(table='users', alias='u')]
+列: [DqlColumnExpr(name='user_id', table='u'), DqlColumnExpr(name='username', table='u'), ...]
 SELECT子句: ['u.user_id', 'u.username', '(SELECT COUNT(*) ...) as order_count']
+子查询: {'order_count': ParsedQuery(position=45, name='order_count' at 0x...)}
 FROM子句: FROM users u
 WHERE子句: WHERE u.age > 18
 ORDER BY子句: ORDER BY u.username
@@ -352,7 +413,7 @@ LIMIT子句: LIMIT 10
 ### 场景2: 临时结果集（聚合查询）
 
 ```python
-from fastsqlparse import Parsed
+from fastsqlparse import ParsedOne, ParsedQuery
 import json
 
 sql = """
@@ -368,14 +429,21 @@ WITH sales_summary AS (
 SELECT * FROM sales_summary WHERE total_sales > 1000
 """
 
-parsed = Parsed(sql)
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    print(f"parsed_query: {query}")
+    print(f"CTEs: {query.cte}")
+    # common_tables 和 expressions 是 CommonTableExpr 对象的属性
+    if hasattr(query.cte, 'common_tables'):
+        print(f"common tables: {query.cte.common_tables}")
+    if hasattr(query.cte, 'expressions'):
+        print(f"expressions: {query.cte.expressions}")
 
-# 获取Tokens
-tokens = parsed.tokens()
-print(f"TOKENS数量: {len(tokens)}")
+print(f"TOKENS数量: {len(parsed.tokens())}")
 print(f"前5个TOKENS:")
-for i, token in enumerate(tokens[:5]):
-    print(f"  {i}: {token} (at: {token.value}, type: {token.type}, value: {token.value})")
+for i, token in enumerate(parsed.tokens()[:5]):
+    print(token)
 
 # 获取AST
 ast_str = parsed.AST()
@@ -413,7 +481,7 @@ for i, (token_type, token_value, position) in enumerate(tokens[:10]):
 ### 场景4: INSERT INTO ... CTE SELECT
 
 ```python
-from fastsqlparse import ParsedInsert
+from fastsqlparse import ParsedInsert, ParsedQuery
 
 sql = """
 INSERT INTO summary_table (product_id, total_amount, avg_amount)
@@ -429,14 +497,32 @@ SELECT product_id, total_amount, avg_amount
 FROM product_stats
 """
 
-insert = ParsedInsert(sql)
+insert_parsed = ParsedInsert(sql)
 
-print("目标表名:", insert.name)
-print("插入的列:", insert.columns)
-print("是否有查询加载:", insert.query_load)
-if insert.query:
-    print("查询对象类型:", type(insert.query))
-    print("查询的sources:", insert.query.sources)
+print("目标表名:", insert_parsed.name)
+print("插入的列:", insert_parsed.columns)
+print("是否有查询加载:", insert_parsed.query_load)
+# 注意：insert_parsed.cte 是 ParsedWithStmt 类型
+if insert_parsed.cte:
+    print("INSERT级别的CTE单元:", insert_parsed.cte.units)
+if insert_parsed.query:
+    print("查询对象类型:", type(insert_parsed.query))
+    if hasattr(insert_parsed.query, 'sources'):
+        print("查询的sources:", insert_parsed.query.sources)
+print("insert_parsed.cte:", insert_parsed.cte)
+
+parsed_query: ParsedQuery = insert_parsed.query
+print("parsed_query:", parsed_query)
+print("parsed_query.parsed:", parsed_query.parsed)
+# parsed_query.cte 是 CommonTableExpr 类型，有 common_tables 和 expressions 属性
+print("parsed_query.cte:", parsed_query.cte)
+if parsed_query.cte:
+    # common_tables 和 expressions 是 CommonTableExpr 对象的属性
+    if hasattr(parsed_query.cte, 'common_tables'):
+        print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
+    if hasattr(parsed_query.cte, 'expressions'):
+        print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
+print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ```
 
 ---
@@ -559,7 +645,7 @@ tokens = tokenize_query("SELECT * FROM users")
 ### Token结构
 
 每个Token包含以下属性:
-- `type`: Token类型（KEYWORD, IDENTIFIER, LITERAL, WHITESPACE等）
+- `type`: Token类型（KEYWORD, IDENTIFIER, NUMBER/STRING, WHITESPACE等）
 - `value`: Token的值
 - `position`: 在SQL中的位置
 
@@ -568,6 +654,15 @@ tokens = parsed.tokens()
 for token in tokens:
     print(f"Type: {token.type}, Value: {token.value}, Pos: {token.at}")
 ```
+
+**Token类型**:
+- `KEYWORD`: SQL关键字 (SELECT, FROM, WHERE等)
+- `IDENTIFIER`: 标识符 (表名、列名、别名)
+- `NUMBER/STRING`: 字面量 (数字、字符串)
+- `WHITESPACE`: 空白字符
+- `SUBQUERY`: 子查询
+- `OPERATOR`: 运算符
+- `COMMENT`: 注释
 
 ---
 
@@ -593,9 +688,10 @@ ast_obj = json.loads(ast_json_dic)
 
 ### 1. 选择合适的解析器
 
-- **通用SQL**: 使用 `Parsed`
-- **仅SELECT**: 使用 `ParsedQuery`（更快）
-- **仅INSERT**: 使用 `ParsedInsert`
+- **通用SQL或多语句**: 使用 `Parsed`
+- **单语句自动识别**: 使用 `ParsedOne` (推荐)
+- **已知SELECT**: 使用 `ParsedQuery`
+- **已知INSERT**: 使用 `ParsedInsert`
 - **仅CTE**: 使用 `ParsedCTE`
 
 ### 2. 性能优化
@@ -621,13 +717,19 @@ except Exception as e:
 
 ### Q1: 如何提取表名？
 ```python
-query = parsed.parsedforest[0]
-for source in query.sources:
-    print(source.table)  # 或查看source的属性
+from fastsqlparse import ParsedOne, ParsedQuery
+
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    for source in query.parsed.sources:
+        print(source.table)  # 或查看source的属性
 ```
 
 ### Q2: 如何处理多语句SQL？
 ```python
+from fastsqlparse import Parsed
+
 parsed = Parsed("SELECT * FROM t1; SELECT * FROM t2;")
 for stmt in parsed.parsedforest:
     print(stmt)
@@ -635,10 +737,29 @@ for stmt in parsed.parsedforest:
 
 ### Q3: 如何获取子查询信息？
 ```python
-query = parsed.parsedforest[0]
-if query.subquery:
-    for subq in query.subquery:
-        print(subq)
+from fastsqlparse import ParsedOne, ParsedQuery
+
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    if query.parsed.subquery:
+        for subq_name, subq in query.parsed.subquery.items():
+            print(f"子查询名称: {subq_name}")
+            print(f"子查询对象: {subq}")
+```
+
+### Q4: 如何使用available_cte()获取可用的CTE？
+```python
+from fastsqlparse import ParsedQuery
+
+sql = """
+WITH cte1 AS (SELECT 1 as n)
+SELECT * FROM cte1
+"""
+
+query = ParsedQuery(sql, 'test')
+available_ctes = query.available_cte()
+print("可用的CTE:", available_ctes)
 ```
 
 ---

@@ -29,9 +29,9 @@ parsed = Parsed(sql)
 
 # Get parsing results
 query = parsed.parsedforest[0]
-print(query.sources)    # Data sources
-print(query.columns)    # Column information
-print(query.format())   # Formatted output
+print(query.parsed.sources)    # Data sources
+print(query.parsed.columns)    # Column information
+print(parsed.format())         # Formatted output
 ```
 
 ---
@@ -79,35 +79,72 @@ tokens = parsed.tokens()
 
 ---
 
+### 1.1. ParsedOne - Single Statement SQL Parser
+
+**Function**: Parse a single SQL statement, automatically detect type and return corresponding parsed object
+
+**Parameters**:
+- `sql_statements` (str): SQL statement string
+
+**Main Attributes**:
+- `parsed`: AbstractParsed - Parsed structure object (could be ParsedQuery, ParsedInsert, etc.)
+- `type`: str - Statement type ("query", "insert", "update", "delete", "create", "view", etc.)
+
+**Main Methods**:
+- `tokens()`: List[Token] - Get token list
+- `AST()`: str - Get JSON formatted AST
+- `format(indent: str = "    ")`: str - Format SQL
+
+**Example**:
+```python
+from fastsqlparse import ParsedOne, ParsedQuery
+
+sql = "SELECT * FROM users WHERE age > 18"
+parsed = ParsedOne(sql)
+
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    print("Sources:", query.parsed.sources)
+    print("Columns:", query.parsed.columns)
+elif parsed.type == "insert":
+    # Handle INSERT statement
+    pass
+```
+
+---
+
 ### 2. ParsedQuery - SELECT Query Parser
 
 **Function**: Specialized parser for SELECT queries, extracts query clauses and metadata
 
 **Parameters**:
 - `statement` (str): SELECT statement
-- `name` (str): Query name
+- `name` (str): Query name identifier
 - `pure` (bool, default=False): Whether to remove comments
 
 **Main Attributes**:
-- `sources`: List of data sources (tables from FROM/JOIN)
-- `columns`: List of selected columns
-- `clause_select`: SELECT clause content
-- `clauses`: List of clauses
-  - FROM clause content
-  - WHERE clause content
-  - GROUP BY/HAVING clause
-  - ORDER BY clause
-  - LIMIT clause
-- `parent`: Parent Parsed object
-- `cte`: CTE mapping dictionary
-- `unions`: List of UNION queries
-- `subquery`: Subquery information
-- `level`: Nesting level
+- `name`: str - Statement name identifier
+- `statement` - Query statement
+- `level` - Nesting level
+- `super`: str - Parent name identifier
+- `parent`: ParsedAbstract - Parent parsed object
+- `cte`: CommonTableExpr - Common Table Expression (CTE at SELECT query level). Note: This object differs from ParsedInsert.cte in type, accessible via `.common_tables` and `.expressions` attributes.
+  - `common_tables`: List[str] - List of common tables
+  - `expressions`: Dict[str, ParsedCTE] - Expression dictionary
+- `parsed`: QueryStatement - Parsed structure object
+  - `unions`: List[ParsedQuery | str] - UNION query list (when T=="UNIONS")
+  - Or:
+    - `sources`: List[DqlSourceExpr] - List of data sources
+    - `columns`: List[DqlColumnExpr] - List of columns
+    - `clause_select`: List[str] - SELECT clause content
+    - `clauses`: List[DqlClause] - All clauses
+    - `subquery`: Dict[str, ParsedQuery] - Subquery dictionary
 
 **Main Methods**:
 - `format(indent, init_indent)`: Format query
 - `ast()`: Generate AST
 - `tokens()`: Get Tokens
+- `available_cte()`: Get all CTEs available in current query scope. These CTEs typically come from ancestor ParsedQuery/ParsedInsert objects, including WITH clauses defined in current and parent queries. Returns a dictionary with CTE names as keys and ParsedCTE objects as values.
 - `tokenize(statement)`: Static method for fast lexical analysis
 
 **Example**:
@@ -126,11 +163,12 @@ LIMIT 10
 """
 
 query = ParsedQuery(sql, "user_orders")
+parsed = query.parsed
 
 # Extract information
-print("Sources:", query.sources)
-print("Columns:", query.columns)
-for i, clause in enumerate(query.clauses):
+print("Sources:", parsed.sources)
+print("Columns:", parsed.columns)
+for i, clause in enumerate(parsed.clauses):
     if clause.part == "CLAUSE_FROM":
         print(f"FROM clause: {clause.clause}")
     elif clause.part == "CLAUSE_WHERE":
@@ -193,10 +231,17 @@ WITH RECURSIVE cte AS (
 SELECT * FROM cte
 """
 
-ctes = ParsedQuery(sql, 'test').cte
-for cte_name in ctes:
-    print("CTE name:", cte_name)
-    print("CTE statement:", ctes[cte_name].format())
+query = ParsedQuery(sql, 'test')
+if query.cte:
+    print("CTEs object:", query.cte)
+    # common_tables and expressions are attributes of CommonTableExpr object
+    if hasattr(query.cte, 'common_tables'):
+        print("common tables:", query.cte.common_tables)
+    if hasattr(query.cte, 'expressions'):
+        print("expressions:", query.cte.expressions)
+        for cte_name in query.cte.expressions:
+            print("CTE name:", cte_name)
+            print("CTE statement:", query.cte.expressions[cte_name].format())
 ```
 
 ---
@@ -210,14 +255,15 @@ for cte_name in ctes:
 - `pure` (bool, default=False): Whether to remove comments
 
 **Main Attributes**:
-- `name`: Target table name
-- `columns`: List of columns to insert
-- `values`: Values to insert
-- `query`: Query object (for INSERT...SELECT)
-- `query_load`: Whether there is a query load
-- `main_stmt`: Main statement
-- `cte_stmt`: CTE statement
-- `query_stmt`: Query statement
+- `name`: str - Target table name
+- `columns`: List[str] - List of columns to insert
+- `values`: List[str] - Values to insert
+- `query`: ParsedQuery - Query object (for INSERT...SELECT)
+- `query_load`: bool - Whether there is a query load
+- `main_stmt`: str - Main statement
+- `cte`: ParsedWithStmt - CTE parsed object (CTE at INSERT statement level, WITH clause defined before INSERT). Note: This object's attributes differ from ParsedQuery.cte, primarily accessed via `.units` for CTE unit list.
+- `cte_stmt`: str - CTE statement
+- `query_stmt`: str - Query statement
 
 **Main Methods**:
 - `format(indent, init_indent)`: Format
@@ -227,7 +273,7 @@ for cte_name in ctes:
 
 **Example**:
 ```python
-from fastsqlparse import ParsedInsert
+from fastsqlparse import ParsedInsert, ParsedQuery
 
 sql1 = "INSERT INTO users (id, name) VALUE (1, 'Alice')"
 insert1 = ParsedInsert(sql1)
@@ -248,12 +294,21 @@ SELECT product_id, total FROM stats sts
 insert2 = ParsedInsert(sql2)
 print("Table name:", insert2.name)
 print("Has query:", insert2.query_load)
+# Note: insert2.cte is ParsedWithStmt type, different from query.cte (CommonTableExpr)
+if insert2.cte:
+    print("INSERT-level CTE units:", insert2.cte.units)
 if insert2.query:
-    for source in insert2.query.sources:
-        print("Clause:", source.raw)
-        print("Table:", source.table)
-        print("Alias:", source.alias)
-
+    print("Query object type:", type(insert2.query))
+    parsed_query: ParsedQuery = insert2.query
+    print("parsed_query.parsed:", parsed_query.parsed)
+    # parsed_query.cte is CommonTableExpr type with common_tables and expressions attributes
+    print("parsed_query.cte:", parsed_query.cte)
+    if parsed_query.cte:
+        # common_tables and expressions are attributes of CommonTableExpr object
+        if hasattr(parsed_query.cte, 'common_tables'):
+            print("common_tables:", parsed_query.cte.common_tables)
+        if hasattr(parsed_query.cte, 'expressions'):
+            print("expressions:", parsed_query.cte.expressions)
 ```
 
 ---
@@ -305,7 +360,7 @@ create = ParsedCreate(sql)
 ### Scenario 1: Basic Query (with Subquery)
 
 ```python
-from fastsqlparse import Parsed
+from fastsqlparse import Parsed, ParsedQuery
 
 sql = """
 SELECT 
@@ -318,14 +373,17 @@ ORDER BY u.username
 LIMIT 10
 """
 
-parsed = Parsed(sql)
-query = parsed.parsedforest[0]
+parsed_multi = Parsed(sql)
+query: ParsedQuery = parsed_multi.parsedforest[0]
+parsed = query.parsed
 
 # Extract key information
-print("Sources:", query.sources)
-print("Columns:", query.columns)
-print("SELECT clause:", query.clause_select)
-for clause in query.clauses:
+print("parsed:", parsed)
+print("Sources:", parsed.sources)
+print("Columns:", parsed.columns)
+print("SELECT clause:", parsed.clause_select)
+print("Subqueries:", parsed.subquery)
+for clause in parsed.clauses:
     if clause.part == "CLAUSE_FROM":
         print(f"FROM clause: {clause.clause}")
     elif clause.part == "CLAUSE_WHERE":
@@ -338,9 +396,12 @@ for clause in query.clauses:
 
 **Output**:
 ```
-Sources: [<DqlSourceExpr object>]
-Columns: [<DqlColumnExpr object>, ...]
+parsed: QueryStatement(type=SELECT)
+
+Sources: [DqlSourceExpr(table='users', alias='u')]
+Columns: [DqlColumnExpr(name='user_id', table='u'), DqlColumnExpr(name='username', table='u'), ...]
 SELECT clause: ['u.user_id', 'u.username', '(SELECT COUNT(*) ...) as order_count']
+Subqueries: {'order_count': ParsedQuery(position=45, name='order_count' at 0x...)}
 FROM clause: FROM users u
 WHERE clause: WHERE u.age > 18
 ORDER BY clause: ORDER BY u.username
@@ -352,7 +413,7 @@ LIMIT clause: LIMIT 10
 ### Scenario 2: Temporary Result Set (Aggregation Query)
 
 ```python
-from fastsqlparse import Parsed
+from fastsqlparse import ParsedOne, ParsedQuery
 import json
 
 sql = """
@@ -368,14 +429,21 @@ WITH sales_summary AS (
 SELECT * FROM sales_summary WHERE total_sales > 1000
 """
 
-parsed = Parsed(sql)
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    print(f"parsed_query: {query}")
+    print(f"CTEs: {query.cte}")
+    # common_tables and expressions are attributes of CommonTableExpr object
+    if hasattr(query.cte, 'common_tables'):
+        print(f"common tables: {query.cte.common_tables}")
+    if hasattr(query.cte, 'expressions'):
+        print(f"expressions: {query.cte.expressions}")
 
-# Get Tokens
-tokens = parsed.tokens()
-print(f"TOKENS count: {len(tokens)}")
+print(f"TOKENS count: {len(parsed.tokens())}")
 print(f"First 5 TOKENS:")
-for i, token in enumerate(tokens[:5]):
-    print(f"  {i}: {token} (at: {token.value}, type: {token.type}, value: {token.value})")
+for i, token in enumerate(parsed.tokens()[:5]):
+    print(token)
 
 # Get AST
 ast_str = parsed.AST()
@@ -413,7 +481,7 @@ for i, (token_type, token_value, position) in enumerate(tokens[:10]):
 ### Scenario 4: INSERT INTO ... CTE SELECT
 
 ```python
-from fastsqlparse import ParsedInsert
+from fastsqlparse import ParsedInsert, ParsedQuery
 
 sql = """
 INSERT INTO summary_table (product_id, total_amount, avg_amount)
@@ -429,14 +497,32 @@ SELECT product_id, total_amount, avg_amount
 FROM product_stats
 """
 
-insert = ParsedInsert(sql)
+insert_parsed = ParsedInsert(sql)
 
-print("Target table name:", insert.name)
-print("Insert columns:", insert.columns)
-print("Has query load:", insert.query_load)
-if insert.query:
-    print("Query object type:", type(insert.query))
-    print("Query sources:", insert.query.sources)
+print("Target table name:", insert_parsed.name)
+print("Insert columns:", insert_parsed.columns)
+print("Has query load:", insert_parsed.query_load)
+# Note: insert_parsed.cte is ParsedWithStmt type
+if insert_parsed.cte:
+    print("INSERT-level CTE units:", insert_parsed.cte.units)
+if insert_parsed.query:
+    print("Query object type:", type(insert_parsed.query))
+    if hasattr(insert_parsed.query, 'sources'):
+        print("Query sources:", insert_parsed.query.sources)
+print("insert_parsed.cte:", insert_parsed.cte)
+
+parsed_query: ParsedQuery = insert_parsed.query
+print("parsed_query:", parsed_query)
+print("parsed_query.parsed:", parsed_query.parsed)
+# parsed_query.cte is CommonTableExpr type with common_tables and expressions attributes
+print("parsed_query.cte:", parsed_query.cte)
+if parsed_query.cte:
+    # common_tables and expressions are attributes of CommonTableExpr object
+    if hasattr(parsed_query.cte, 'common_tables'):
+        print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
+    if hasattr(parsed_query.cte, 'expressions'):
+        print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
+print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ```
 
 ---
@@ -560,7 +646,7 @@ Fast lexical analysis for VIEW statements
 ### Token Structure
 
 Each Token contains the following attributes:
-- `type`: Token type (KEYWORD, IDENTIFIER, LITERAL, WHITESPACE, etc.)
+- `type`: Token type (KEYWORD, IDENTIFIER, NUMBER/STRING, WHITESPACE, etc.)
 - `value`: Token value
 - `position`: Position in SQL
 
@@ -569,6 +655,15 @@ tokens = parsed.tokens()
 for token in tokens:
     print(f"Type: {token.type}, Value: {token.value}, Pos: {token.at}")
 ```
+
+**Token Types**:
+- `KEYWORD`: SQL keywords (SELECT, FROM, WHERE, etc.)
+- `IDENTIFIER`: Identifiers (table names, column names, aliases)
+- `NUMBER/STRING`: Literals (numbers, strings)
+- `WHITESPACE`: Whitespace characters
+- `SUBQUERY`: Subquery
+- `OPERATOR`: Operators
+- `COMMENT`: Comments
 
 ---
 
@@ -594,9 +689,10 @@ ast_obj = json.loads(ast_json_dic)
 
 ### 1. Choose the Right Parser
 
-- **General SQL**: Use `Parsed`
-- **SELECT only**: Use `ParsedQuery` (faster)
-- **INSERT only**: Use `ParsedInsert`
+- **General SQL or multi-statements**: Use `Parsed`
+- **Single statement auto-detect**: Use `ParsedOne` (recommended)
+- **Known SELECT**: Use `ParsedQuery`
+- **Known INSERT**: Use `ParsedInsert`
 - **CTE only**: Use `ParsedCTE`
 
 ### 2. Performance Optimization
@@ -622,13 +718,19 @@ except Exception as e:
 
 ### Q1: How to extract table names?
 ```python
-query = parsed.parsedforest[0]
-for source in query.sources:
-    print(source.table)  # or check source attributes
+from fastsqlparse import ParsedOne, ParsedQuery
+
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    for source in query.parsed.sources:
+        print(source.table)  # or check source attributes
 ```
 
 ### Q2: How to handle multi-statement SQL?
 ```python
+from fastsqlparse import Parsed
+
 parsed = Parsed("SELECT * FROM t1; SELECT * FROM t2;")
 for stmt in parsed.parsedforest:
     print(stmt)
@@ -636,10 +738,29 @@ for stmt in parsed.parsedforest:
 
 ### Q3: How to get subquery information?
 ```python
-query = parsed.parsedforest[0]
-if query.subquery:
-    for subq in query.subquery:
-        print(subq)
+from fastsqlparse import ParsedOne, ParsedQuery
+
+parsed = ParsedOne(sql)
+if parsed.type == "query":
+    query: ParsedQuery = parsed.parsed
+    if query.parsed.subquery:
+        for subq_name, subq in query.parsed.subquery.items():
+            print(f"Subquery name: {subq_name}")
+            print(f"Subquery object: {subq}")
+```
+
+### Q4: How to use available_cte() to get available CTEs?
+```python
+from fastsqlparse import ParsedQuery
+
+sql = """
+WITH cte1 AS (SELECT 1 as n)
+SELECT * FROM cte1
+"""
+
+query = ParsedQuery(sql, 'test')
+available_ctes = query.available_cte()
+print("Available CTEs:", available_ctes)
 ```
 
 ---
