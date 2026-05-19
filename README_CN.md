@@ -1028,3 +1028,17 @@ pytest test/
 ---
 
 **GitHub**: https://github.com/Nohaltsail/fast-pysqlparse
+
+---
+
+本项目包含预编译的动态链接库文件（`.pyd` for Windows, `.so` for Linux），这些文件是 C++17 核心解析引擎的编译产物。
+
+**当前状态**: 动态库的 C++ 源代码暂时未公开。
+
+**未来计划**: 我们计划在后续版本中公开 C++ 核心引擎的完整源代码，以实现完全开源。
+
+**使用权限**: 尽管 C++ 源代码暂未公开，但您仍然可以：
+- 自由使用本项目的 Python API 和所有功能
+- 查看和修改所有 Python 源代码
+- 根据 MIT License 的条款分发和使用本软件
+- 基于本项目进行二次开发

@@ -175,3 +175,17 @@ The pre-compiled dynamic library files (`.pyd`/`.so`) included in this project a
 
 For more information, please refer to the [LICENSE](LICENSE) file.
 
+
+---
+This project includes pre-compiled dynamic library files (`.pyd` for Windows, `.so` for Linux), which are compiled artifacts of the C++17 core parsing engine.
+
+**Current Status**: The C++ source code for the dynamic libraries is not currently public.
+
+**Future Plans**: We plan to release the complete source code of the C++ core engine in future versions to achieve full open-source status.
+
+**Usage Rights**: Although the C++ source code is not yet public, you are still free to:
+- Use the Python API and all features of this project
+- View and modify all Python source code
+- Distribute and use this software under the terms of the MIT License
+- Build upon this project for secondary development
+
