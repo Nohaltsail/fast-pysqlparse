@@ -805,4 +805,5 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ### Note on Dynamic Libraries
 
-The pre-compiled dynamic library files (`.pyd`/`.so`) included in this project are currently distributed as binary-only. The C++ source code for these libraries will be made publicly available in a future release.
+This project currently distributes precompiled dynamic libraries (`.pyd` and `.so`).
+The corresponding C++ source code for these dynamic libraries is temporarily not public and is planned to be opened in a future release.
