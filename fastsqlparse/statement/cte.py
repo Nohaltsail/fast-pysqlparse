@@ -44,6 +44,17 @@ class ParsedCTE(object):
             pure: bool = False,
             name: str = None
     ):
+        """
+        Initialize a CTE parser instance.
+
+        Args:
+            statement: SQL WITH/CTE statement.
+            pure: Controls SQL comment handling. True strips `--` and
+                `/* ... */` comments before parsing, so formatted output and
+                token results exclude comments and parsing may be faster.
+                False preserves comments.
+            name: Optional logical name for this CTE wrapper.
+        """
         self.name = None or "WITH"
         self.__stmt__ = parser.cte(statement, pure)
         for m in ParsedCTE.__callables__:

@@ -57,7 +57,10 @@ class Parsed(pysqlparser.Parsed):
         sql_statements: SQL statement string to be parsed
         file: SQL file
         name: Name for the parsed content
-        pure: Whether to ignore comments
+        pure: Controls SQL comment handling. When True, `--` and `/* ... */`
+              comments are stripped before parsing so formatted output and
+              tokens exclude comments and parsing may be faster. When False,
+              comments are preserved.
 
     Note:
         Either sql_statements or file must be provided.

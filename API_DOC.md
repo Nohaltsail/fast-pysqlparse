@@ -48,7 +48,7 @@ print(parsed.format())         # Formatted output
 - `sql_statements` (str): SQL statement string
 - `file` (str, optional): SQL file path
 - `name` (str, optional): Name identifier for the parsed content
-- `pure` (bool, default=False): Whether to ignore comments
+- `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
 
 **Main Attributes and Methods**:
 - `parsed_forest`: Returns list of parsed statements
@@ -124,7 +124,7 @@ elif parsed.type == "insert":
 **Parameters**:
 - `statement` (str): SELECT statement
 - `name` (str): Query name identifier
-- `pure` (bool, default=False): Whether to remove comments
+- `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
 
 **Main Attributes**:
 - `name`: str - Statement name identifier
@@ -201,7 +201,7 @@ for token_value, token_type, pos in tokens[:5]:
 
 **Parameters**:
 - `statement` (str): WITH statement
-- `pure` (bool, default=False): Whether to remove comments
+- `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
 - `name` (str, optional): CTE name
 
 **Main Attributes**:
@@ -257,7 +257,7 @@ if query.cte:
 
 **Parameters**:
 - `statement` (str): INSERT statement
-- `pure` (bool, default=False): Whether to remove comments
+- `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
 
 **Main Attributes**:
 - `name`: str - Target table name
@@ -566,11 +566,20 @@ print(stripped)
 
 ### Performance Results
 
-| Parser | Total Time (100 iterations) | Average per Parse | Relative Speed |
-|--------|---------------------------|-------------------|----------------|
-| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0x** (baseline) |
-| sqlparse | 1.3040s | 13.04ms | **76.75x** faster |
-| sqlglot | 0.4283s | 4.28ms | **25.21x** faster |
+test script：`test/python_parsers_10m.py`
+
+| parser             | interval | CPS |
+|--------------------|----------|-----|
+| **fastsqlparse**   | 1.3054s  | 7,660,928.40 |
+| pglast             | 4.3322s  | 2,308,429.85 |
+| sqlglot (postgres) | 22.9163s | 436,392.53 |
+| sqlparse           | 87.2098s | 114,671.60 |
+
+comment：
+- SQL length：10,000,484 chars
+- times：1
+- result：from `test/benchmark_results/python_parsers_10m.json`
+
 
 ### Large-Scale Tests
 
@@ -726,7 +735,7 @@ print(json.dumps(full_ast, indent=2, ensure_ascii=False))
 ### 2. Performance Optimization
 
 - If you only need lexical information, use the `tokenize()` static method
-- Set `pure=True` to skip comment processing and improve speed
+- Set `pure=True` to strip `--` and `/* ... */` comments before parsing; this usually improves speed and keeps formatted output/tokens comment-free
 - Avoid re-parsing the same SQL, cache parsing results
 
 ### 3. Error Handling

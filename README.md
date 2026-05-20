@@ -41,24 +41,33 @@ This library is engineered for speed. By moving the computationally intensive pa
 
 ### Benchmark Results
 
-#### Test 1: Comparison with sqlparse/sqlglot (1359 char SQL, 100 iterations)
-| Parser | Total Time | Avg per Parse | Speedup              |
-|--------|-----------|---------------|----------------------|
-| **fast-pysqlparse** | 0.0170s | 0.17ms | **1.0 x** (baseline) |
-| sqlparse | 1.3040s | 13.04ms | **75 x** faster      |
-| sqlglot | 0.4283s | 4.28ms | **25 x** faster      |
-
-#### Test 2: 5000 Iterations
+#### Test 1: 5000 Iterations
 - SQL Length: 600+ characters
 - Total Time: 0.60s
 - **PPS (Parses Per Second): 8000+**
 - Average per parse: 0.1ms~0.15ms
 
-#### Test 3: 10 Million Character SQL
+#### Test 2: 10 Million Character SQL
 - SQL Length: 10,000,000 characters
 - Total Time: 1.40s
 - **CPS (Characters Per Second): ~7,500,000**
 - Parse successful!
+
+#### Test 3: Python-Only Comparison on ~10M PostgreSQL SQL (No C Benchmark)
+
+Benchmark script: `test/python_parsers_10m.py`
+
+| Parser | Avg Time | CPS |
+|--------|----------|-----|
+| **fastsqlparse** | 1.3054s | 7,660,928.40 |
+| pglast | 4.3322s | 2,308,429.85 |
+| sqlglot (postgres) | 22.9163s | 436,392.53 |
+| sqlparse | 87.2098s | 114,671.60 |
+
+Notes:
+- SQL size: 10,000,484 chars
+- Runs per parser: 1
+- Results source: results of `test/python_parsers_10m.py`
 
 ## Installation
 
@@ -140,6 +149,22 @@ LIMIT 50, 100"""
     # Extract table lineage/dependencies from the query
     src_tables = ParsedQuery.parse_dependence(sql)  # Get source tables (dependencies) of the query
 
+```
+
+### Comment Handling (`pure`)
+
+`pure` controls SQL comment handling in parser constructors such as `Parsed`,
+`ParsedQuery`, `ParsedInsert`, `ParsedCTE`, and `ParsedView`.
+
+- `pure=False` (default): keep comments in parsing/formatting output.
+- `pure=True`: strip `--` and `/* ... */` comments before parsing; formatted
+  output and token results exclude comments, and parsing may be faster.
+
+```python
+from fastsqlparse import Parsed
+
+parsed_keep = Parsed(sql, pure=False)  # preserve comments
+parsed_clean = Parsed(sql, pure=True)  # strip comments before parse
 ```
 
 ## When to Use Which Parser

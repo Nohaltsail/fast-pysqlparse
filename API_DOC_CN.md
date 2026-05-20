@@ -48,7 +48,7 @@ print(parsed.format())         # 格式化输出
 - `sql_statements` (str): SQL语句字符串
 - `file` (str, optional): SQL文件路径
 - `name` (str, optional): 解析内容名称
-- `pure` (bool, default=False): 是否忽略注释
+- `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
 
 **主要属性和方法**:
 - `parsed_forest`: 返回解析后的语句列表
@@ -124,7 +124,7 @@ elif parsed.type == "insert":
 **参数**:
 - `statement` (str): SELECT语句
 - `name` (str): 查询名称标识
-- `pure` (bool, default=False): 是否去除注释
+- `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
 
 **主要属性**:
 - `name`: str - 语句名称标识
@@ -201,7 +201,7 @@ for token_value, token_type, pos in tokens[:5]:
 
 **参数**:
 - `statement` (str): WITH语句
-- `pure` (bool, default=False): 是否去除注释
+- `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
 - `name` (str, optional): CTE名称
 
 **主要属性**:
@@ -257,7 +257,7 @@ if query.cte:
 
 **参数**:
 - `statement` (str): INSERT语句
-- `pure` (bool, default=False): 是否去除注释
+- `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
 
 **主要属性**:
 - `name`: str - 目标表名
@@ -564,14 +564,6 @@ print(stripped)
 - SQL长度: 1359字符
 - 测试次数: 100次
 
-### 性能结果
-
-| 解析器 | 总耗时(100次) | 平均每次 | 相对速度 |
-|--------|--------------|---------|---------|
-| **fast-pysqlparse** | 0.0170秒 | 0.17ms | **1.0x** (基准) |
-| sqlparse | 1.3040秒 | 13.04ms | **76.75x** 更快 |
-| sqlglot | 0.4283秒 | 4.28ms | **25.21x** 更快 |
-
 ### 大规模测试
 
 #### 测试1: 5000次解析
@@ -585,6 +577,22 @@ print(stripped)
 - 总耗时: 1.4085秒
 - **CPS (Characters Per Second): 7,455,540**
 - 解析成功！
+
+#### 测试3: 仅 Python 四库对比（约 10M PostgreSQL SQL，不含 C 版本）
+
+基准脚本：`test/python_parsers_10m.py`
+
+| 解析器 | 平均耗时 | CPS |
+|--------|----------|-----|
+| **fastsqlparse** | 1.3054s | 7,660,928.40 |
+| pglast | 4.3322s | 2,308,429.85 |
+| sqlglot (postgres) | 22.9163s | 436,392.53 |
+| sqlparse | 87.2098s | 114,671.60 |
+
+说明：
+- SQL长度：10,000,484字符
+- 每个解析器运行次数：1
+- 结果来源：`test/benchmark_results/python_parsers_10m.json`运行结果
 
 ---
 
@@ -725,7 +733,7 @@ print(json.dumps(full_ast, indent=2, ensure_ascii=False))
 ### 2. 性能优化
 
 - 如果只需要词法信息，使用 `tokenize()` 静态方法
-- 设置 `pure=True` 可以跳过注释处理，提升速度
+- 设置 `pure=True` 会在解析前移除 `--` 和 `/* ... */` 注释；通常可提升速度，并让格式化结果与 tokens 不含注释
 - 避免重复解析相同SQL，缓存解析结果
 
 ### 3. 错误处理
