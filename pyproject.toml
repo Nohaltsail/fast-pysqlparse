@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fast-pysqlparse"
-version = "0.6.0"
+version = "0.6.1"
 description = "A fast SQL parser with Python wrapper and C++ core"
 readme = "README.md"
 authors = [
@@ -36,4 +36,4 @@ Issues = "https://github.com/Nohaltsail/fast-pysqlparse/issues"
 packages = {find = {include = ["fastsqlparse", "fastsqlparse.*"]}}
 
 [tool.setuptools.package-data]
-fastsqlparse = ["*.so", "*.pyd", "**/*.so", "**/*.pyd"]
+fastsqlparse = ["pysqlparser*.so", "pysqlparser*.pyd"]
