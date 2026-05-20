@@ -15,6 +15,8 @@ This library provides a robust set of tools for parsing and analyzing SQL statem
 
 It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
 
+The parser is primarily tested against MySQL-style SQL. Current supported dialect names are exposed in `fastsqlparse.conf.SUPPORT_DIALECTS`.
+
 ## Features
 
 - **Fast SQL Parsing**: Leverages a high-performance C++17 core to parse SQL statements rapidly
@@ -77,8 +79,7 @@ From Source:
 
 
 ```python
-from fastsqlparse import Parsed
-from fastsqlparse.statement import ParsedQuery
+from fastsqlparse import Parsed, ParsedQuery
 
 if __name__ == '__main__':
     sql = """
@@ -127,8 +128,8 @@ LIMIT 50, 100"""
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
-    # Tokenization - returns list of tuples containing (value, type, position)
-    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (value, type, position)
+    # Tokenization - returns list of tuples containing (token_value, token_type, position)
+    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (token_value, token_type, position)
 
     # Alternative tokenization - returns list of token objects with attributes
     token_obj_list = sql_stmt.tokens()  # Get object list of token information

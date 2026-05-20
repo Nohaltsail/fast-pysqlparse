@@ -23,6 +23,9 @@ class ParsedCTE(object):
     - Multiple CTEs: WITH cte1 AS (...), cte2 AS (...)
     - Recursive CTEs: WITH RECURSIVE cte_name AS (...)
     """
+    raw: str
+    units: List[Any]
+    name: str
     
     __attrs__ = (
         "raw",

@@ -150,8 +150,7 @@ FROM product_stats
     print(f"是否有查询加载: {insert_parsed.query_load}")
     if insert_parsed.query:
         print(f"查询对象类型: {type(insert_parsed.query)}")
-        if hasattr(insert_parsed.query, 'sources'):
-            print(f"查询的sources: {insert_parsed.query.sources}")
+        print(f"查询的sources: {insert_parsed.query.parsed.sources}")
     print(f"insert_parsed.cte: {insert_parsed.cte}")
 
     print("++++++++++++++++++++++++++++++")
@@ -167,8 +166,8 @@ FROM product_stats
 
 
 def test_scenario5_insert_cte_select():
-    """场景4：INSERT INTO ... CTE SELECT - 提取字段和query对象"""
-    print("\n【场景4】INSERT INTO ... CTE SELECT")
+    """场景5：WITH 在 INSERT 之前的 CTE SELECT - 提取字段和query对象"""
+    print("\n【场景5】WITH 在 INSERT 之前的 CTE SELECT")
     print("-" * 80)
 
     sql = """

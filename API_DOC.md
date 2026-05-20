@@ -20,6 +20,8 @@ pip install fast-pysqlparse
 
 ## Quick Start
 
+> The parser is primarily tested against MySQL-style SQL. Current supported dialect names are exposed in `fastsqlparse.conf.SUPPORT_DIALECTS`.
+
 ```python
 from fastsqlparse import Parsed, ParsedQuery
 
@@ -132,13 +134,16 @@ elif parsed.type == "insert":
   - `common_tables`: List[str] - List of common tables
   - `expressions`: Dict[str, ParsedCTE] - Expression dictionary
 - `parsed`: QueryStatement - Parsed structure object
-  - `unions`: List[ParsedQuery | str] - UNION query list (when T=="UNIONS")
-  - Or:
+  - Normal SELECT form:
+    - `T`: str - statement type, usually `SELECT`
     - `sources`: List[DqlSourceExpr] - List of data sources
     - `columns`: List[DqlColumnExpr] - List of columns
     - `clause_select`: List[str] - SELECT clause content
     - `clauses`: List[DqlClause] - All clauses
     - `subquery`: Dict[str, ParsedQuery] - Subquery dictionary
+  - UNION form:
+    - `T`: str - statement type, usually `UNIONS`
+    - `unions`: List[ParsedQuery | str] - UNION query list
 
 **Main Methods**:
 - `format(indent, init_indent)`: Format query
@@ -182,7 +187,7 @@ for i, clause in enumerate(parsed.clauses):
 
 # Fast tokenizer
 tokens = ParsedQuery.tokenize(sql)
-for token_type, token_value, pos in tokens[:5]:
+for token_value, token_type, pos in tokens[:5]:
     print(f"{token_type}: {token_value}")
 ```
 
@@ -235,13 +240,11 @@ query = ParsedQuery(sql, 'test')
 if query.cte:
     print("CTEs object:", query.cte)
     # common_tables and expressions are attributes of CommonTableExpr object
-    if hasattr(query.cte, 'common_tables'):
-        print("common tables:", query.cte.common_tables)
-    if hasattr(query.cte, 'expressions'):
-        print("expressions:", query.cte.expressions)
-        for cte_name in query.cte.expressions:
-            print("CTE name:", cte_name)
-            print("CTE statement:", query.cte.expressions[cte_name].format())
+    print("common tables:", query.cte.common_tables)
+    print("expressions:", query.cte.expressions)
+    for cte_name in query.cte.expressions:
+        print("CTE name:", cte_name)
+        print("CTE statement:", query.cte.expressions[cte_name].format())
 ```
 
 ---
@@ -305,10 +308,8 @@ if insert2.query:
     print("parsed_query.cte:", parsed_query.cte)
     if parsed_query.cte:
         # common_tables and expressions are attributes of CommonTableExpr object
-        if hasattr(parsed_query.cte, 'common_tables'):
-            print("common_tables:", parsed_query.cte.common_tables)
-        if hasattr(parsed_query.cte, 'expressions'):
-            print("expressions:", parsed_query.cte.expressions)
+        print("common_tables:", parsed_query.cte.common_tables)
+        print("expressions:", parsed_query.cte.expressions)
 ```
 
 ---
@@ -435,9 +436,8 @@ if parsed.type == "query":
     print(f"parsed_query: {query}")
     print(f"CTEs: {query.cte}")
     # common_tables and expressions are attributes of CommonTableExpr object
-    if hasattr(query.cte, 'common_tables'):
+    if query.cte:
         print(f"common tables: {query.cte.common_tables}")
-    if hasattr(query.cte, 'expressions'):
         print(f"expressions: {query.cte.expressions}")
 
 print(f"TOKENS count: {len(parsed.tokens())}")
@@ -472,7 +472,7 @@ SELECT 'TOTAL' as region, SUM(total) FROM region_sales
 # Use Tokenizer for fast lexical analysis
 tokens = ParsedQuery.tokenize(sql)
 print(f"Tokenizer results (first 10 tokens):")
-for i, (token_type, token_value, position) in enumerate(tokens[:10]):
+for i, (token_value, token_type, position) in enumerate(tokens[:10]):
     print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
 ```
 
@@ -507,8 +507,7 @@ if insert_parsed.cte:
     print("INSERT-level CTE units:", insert_parsed.cte.units)
 if insert_parsed.query:
     print("Query object type:", type(insert_parsed.query))
-    if hasattr(insert_parsed.query, 'sources'):
-        print("Query sources:", insert_parsed.query.sources)
+    print("Query sources:", insert_parsed.query.parsed.sources)
 print("insert_parsed.cte:", insert_parsed.cte)
 
 parsed_query: ParsedQuery = insert_parsed.query
@@ -518,10 +517,8 @@ print("parsed_query.parsed:", parsed_query.parsed)
 print("parsed_query.cte:", parsed_query.cte)
 if parsed_query.cte:
     # common_tables and expressions are attributes of CommonTableExpr object
-    if hasattr(parsed_query.cte, 'common_tables'):
-        print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
-    if hasattr(parsed_query.cte, 'expressions'):
-        print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
+    print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
+    print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
 print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ```
 
@@ -611,11 +608,13 @@ Format SQL statement
 from fastsqlparse import format
 
 sql = "SELECT * FROM users WHERE id=1"
-formatted = format(sql, "query", indent="  ")
+formatted = format(sql, indent="  ")
 ```
 
 #### `tokenize(sql: str) -> List[Tuple[str, str, int]]`
 Lexical analysis
+
+Returned tuples follow the order `(token_value, token_type, position)`.
 
 #### `tokenize_query(sql: str) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for SELECT statements
@@ -667,6 +666,21 @@ for token in tokens:
 
 ---
 
+### Common AST / Type Reference
+
+These names show up repeatedly in parser results and examples:
+
+| Type | Typical fields | Notes |
+|------|----------------|-------|
+| `DqlSourceExpr` | `table`, `alias` | FROM/JOIN source expression |
+| `DqlColumnExpr` | `name`, `table`, `alias` | SELECT / derived column metadata |
+| `DqlClause` | `part`, `clause` | Individual query clause node |
+| `QueryStatement` | `T`, `sources`, `columns`, `clauses`, `subquery`, `clause_select` or `T`, `unions` | Parsed SELECT or UNION structure |
+| `CommonTableExpr` | `common_tables`, `expressions` | SELECT-level CTE container |
+| `ParsedWithStmt` | `units` | INSERT-level WITH statement container |
+
+---
+
 ### AST Structure
 
 AST is returned in JSON format, containing:
@@ -702,6 +716,8 @@ ast_obj = json.loads(ast_json_dic)
 - Avoid re-parsing the same SQL, cache parsing results
 
 ### 3. Error Handling
+
+Parsing failures are raised as standard Python exceptions from the binding layer, so `except Exception as e` is sufficient for most applications.
 
 ```python
 from fastsqlparse import Parsed

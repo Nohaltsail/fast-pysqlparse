@@ -20,6 +20,8 @@ pip install fast-pysqlparse
 
 ## 快速开始
 
+> 解析器主要针对 MySQL 风格 SQL 进行测试；当前支持的方言名称可在 `fastsqlparse.conf.SUPPORT_DIALECTS` 中查看。
+
 ```python
 from fastsqlparse import Parsed, ParsedQuery
 
@@ -132,13 +134,16 @@ elif parsed.type == "insert":
   - `common_tables`: List[str] - 公共表列表
   - `expressions`: Dict[str, ParsedCTE] - 表达式字典
 - `parsed`: QueryStatement - 解析后的结构对象
-  - `unions`: List[ParsedQuery | str] - UNION查询列表（当T=="UNIONS"时）
-  - 或：
+  - 普通 SELECT 形态：
+    - `T`: str - 语句类型，通常为 `SELECT`
     - `sources`: List[DqlSourceExpr] - 数据源列表
     - `columns`: List[DqlColumnExpr] - 列列表
     - `clause_select`: List[str] - SELECT子句内容
     - `clauses`: List[DqlClause] - 所有子句
     - `subquery`: Dict[str, ParsedQuery] - 子查询字典
+  - UNION 形态：
+    - `T`: str - 语句类型，通常为 `UNIONS`
+    - `unions`: List[ParsedQuery | str] - UNION查询列表
 
 **主要方法**:
 - `format(indent, init_indent)`: 格式化查询
@@ -182,7 +187,7 @@ for i, clause in enumerate(parsed.clauses):
 
 # 快速tokenizer
 tokens = ParsedQuery.tokenize(sql)
-for token_type, token_value, pos in tokens[:5]:
+for token_value, token_type, pos in tokens[:5]:
     print(f"{token_type}: {token_value}")
 ```
 
@@ -235,13 +240,11 @@ query = ParsedQuery(sql, 'test')
 if query.cte:
     print("CTEs对象:", query.cte)
     # common_tables 和 expressions 是 CommonTableExpr 对象的属性
-    if hasattr(query.cte, 'common_tables'):
-        print("common tables:", query.cte.common_tables)
-    if hasattr(query.cte, 'expressions'):
-        print("expressions:", query.cte.expressions)
-        for cte_name in query.cte.expressions:
-            print("CTE名称:", cte_name)
-            print("CTE语句:", query.cte.expressions[cte_name].format())
+    print("common tables:", query.cte.common_tables)
+    print("expressions:", query.cte.expressions)
+    for cte_name in query.cte.expressions:
+        print("CTE名称:", cte_name)
+        print("CTE语句:", query.cte.expressions[cte_name].format())
 ```
 
 ---
@@ -305,10 +308,8 @@ if insert2.query:
     print("parsed_query.cte:", parsed_query.cte)
     if parsed_query.cte:
         # common_tables 和 expressions 是 CommonTableExpr 对象的属性
-        if hasattr(parsed_query.cte, 'common_tables'):
-            print("common_tables:", parsed_query.cte.common_tables)
-        if hasattr(parsed_query.cte, 'expressions'):
-            print("expressions:", parsed_query.cte.expressions)
+        print("common_tables:", parsed_query.cte.common_tables)
+        print("expressions:", parsed_query.cte.expressions)
 ```
 
 ---
@@ -435,9 +436,8 @@ if parsed.type == "query":
     print(f"parsed_query: {query}")
     print(f"CTEs: {query.cte}")
     # common_tables 和 expressions 是 CommonTableExpr 对象的属性
-    if hasattr(query.cte, 'common_tables'):
+    if query.cte:
         print(f"common tables: {query.cte.common_tables}")
-    if hasattr(query.cte, 'expressions'):
         print(f"expressions: {query.cte.expressions}")
 
 print(f"TOKENS数量: {len(parsed.tokens())}")
@@ -472,7 +472,7 @@ SELECT 'TOTAL' as region, SUM(total) FROM region_sales
 # 使用Tokenizer进行快速词法分析
 tokens = ParsedQuery.tokenize(sql)
 print(f"Tokenizer结果 (前10个token):")
-for i, (token_type, token_value, position) in enumerate(tokens[:10]):
+for i, (token_value, token_type, position) in enumerate(tokens[:10]):
     print(f"  {i}: type={token_type}, value='{token_value}', pos={position}")
 ```
 
@@ -507,8 +507,7 @@ if insert_parsed.cte:
     print("INSERT级别的CTE单元:", insert_parsed.cte.units)
 if insert_parsed.query:
     print("查询对象类型:", type(insert_parsed.query))
-    if hasattr(insert_parsed.query, 'sources'):
-        print("查询的sources:", insert_parsed.query.sources)
+    print("查询的sources:", insert_parsed.query.parsed.sources)
 print("insert_parsed.cte:", insert_parsed.cte)
 
 parsed_query: ParsedQuery = insert_parsed.query
@@ -518,10 +517,8 @@ print("parsed_query.parsed:", parsed_query.parsed)
 print("parsed_query.cte:", parsed_query.cte)
 if parsed_query.cte:
     # common_tables 和 expressions 是 CommonTableExpr 对象的属性
-    if hasattr(parsed_query.cte, 'common_tables'):
-        print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
-    if hasattr(parsed_query.cte, 'expressions'):
-        print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
+    print("parsed_query.cte.common_tables:", parsed_query.cte.common_tables)
+    print("parsed_query.cte.expressions:", parsed_query.cte.expressions)
 print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ```
 
@@ -611,10 +608,12 @@ clean = strip_note(sql)
 from fastsqlparse import format
 
 sql = "SELECT * FROM users WHERE id=1"
-formatted = format(sql, "query", indent="  ")
+formatted = format(sql, indent="  ")
 ```
 #### `tokenize(sql: str) -> List[Tuple[str, str, int]]`
 词法分析
+
+返回的元组顺序为 `(token_value, token_type, position)`。
 
 #### `tokenize_query(sql: str) -> List[Tuple[str, str, int]]`
 快速词法分析SELECT语句
@@ -666,6 +665,21 @@ for token in tokens:
 
 ---
 
+### 常见 AST / 类型速查
+
+以下类型会在解析结果和示例中反复出现：
+
+| 类型 | 常见字段 | 说明 |
+|------|----------|------|
+| `DqlSourceExpr` | `table`, `alias` | FROM/JOIN 数据源表达式 |
+| `DqlColumnExpr` | `name`, `table`, `alias` | SELECT / 派生列元数据 |
+| `DqlClause` | `part`, `clause` | 单个查询子句节点 |
+| `QueryStatement` | `T`, `sources`, `columns`, `clauses`, `subquery`, `clause_select` 或 `T`, `unions` | SELECT / UNION 解析结构 |
+| `CommonTableExpr` | `common_tables`, `expressions` | SELECT 级别 CTE 容器 |
+| `ParsedWithStmt` | `units` | INSERT 级别 WITH 语句容器 |
+
+---
+
 ### AST结构
 
 AST以JSON格式返回，包含:
@@ -701,6 +715,8 @@ ast_obj = json.loads(ast_json_dic)
 - 避免重复解析相同SQL，缓存解析结果
 
 ### 3. 错误处理
+
+底层解析失败会以标准 Python 异常的形式抛出，大多数场景直接使用 `except Exception as e` 即可。
 
 ```python
 from fastsqlparse import Parsed

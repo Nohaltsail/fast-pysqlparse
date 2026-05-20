@@ -20,6 +20,16 @@ class ParsedInsert(object):
     - Query inserts: INSERT INTO table SELECT * FROM source_table
     - Bulk inserts: INSERT INTO table VALUES (v1,v2), (v3,v4), ...
     """
+    raw: str
+    name: str
+    query_load: bool
+    cte: Any
+    query: Any
+    columns: List[str]
+    values: List[str]
+    main_stmt: str
+    cte_stmt: str
+    query_stmt: str
 
     __attrs__ = (
         "raw",

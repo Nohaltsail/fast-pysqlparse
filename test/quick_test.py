@@ -1,5 +1,4 @@
-from fastsqlparse import ParsedSQL
-from fastsqlparse.statement.query import ParsedQuery
+from fastsqlparse import Parsed, ParsedQuery
 
 if __name__ == '__main__':
     sql = """
@@ -43,13 +42,13 @@ LIMIT 50, 100"""
     sql_len = len(sql)
     print("sql length: ", sql_len)
 
-    # parse sql statements to SQL object
-    sql_stmt = ParsedSQL(sql)
+    # parse sql statements to SQL object (ParsedSQL remains a legacy alias of Parsed)
+    sql_stmt = Parsed(sql)
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
-    # Tokenization - returns list of tuples containing (value, type, position)
-    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (value, type, position)
+    # Tokenization - returns list of tuples containing (token_value, token_type, position)
+    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (token_value, token_type, position)
 
     # Alternative tokenization - returns list of token objects with attributes
     token_obj_list = sql_stmt.tokens()  # Get object list of token information

@@ -1,4 +1,4 @@
-from typing import List, Any, Tuple, Dict
+from typing import List, Any, Tuple
 from fastsqlparse import pysqlparser as parser
 
 
@@ -10,6 +10,15 @@ class ParsedQuery(object):
     to handle and format SQL queries. It uses the pysqlparser library to parse SQL statements
     and initializes the class attributes based on the parsed results.
     """
+    name: str
+    raw: str
+    super: str
+    parent: Any
+    level: int
+    parsed: Any
+    cte: Any
+    statement: str
+
     __attrs__ = (
         "name",
         "raw",
