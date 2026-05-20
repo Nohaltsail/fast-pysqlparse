@@ -200,20 +200,20 @@ jobs:
           if len(wheels) != 10:
               raise SystemExit(f"Expected exactly 10 wheels, found {len(wheels)}: {[w.name for w in wheels]}")
 
-          required_tags = {
-              "cp310-cp310-win_amd64",
-              "cp311-cp311-win_amd64",
-              "cp312-cp312-win_amd64",
-              "cp313-cp313-win_amd64",
-              "cp314-cp314-win_amd64",
-              "cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64",
-              "cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64",
-              "cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64",
-              "cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64",
-              "cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64",
+          required_pairs = {
+              ("cp310", "cp310", "win"),
+              ("cp311", "cp311", "win"),
+              ("cp312", "cp312", "win"),
+              ("cp313", "cp313", "win"),
+              ("cp314", "cp314", "win"),
+              ("cp310", "cp310", "linux"),
+              ("cp311", "cp311", "linux"),
+              ("cp312", "cp312", "linux"),
+              ("cp313", "cp313", "linux"),
+              ("cp314", "cp314", "linux"),
           }
 
-          found_tags = set()
+          found_pairs = set()
 
           for wheel in wheels:
               stem = wheel.stem
@@ -221,15 +221,27 @@ jobs:
               if len(parts) < 5:
                   raise SystemExit(f"Unexpected wheel filename format: {wheel.name}")
 
-              tag = "-".join(parts[-3:])
-              found_tags.add(tag)
+              py_tag = parts[-3]
+              abi_tag = parts[-2]
+              platform_tag = parts[-1]
 
-              if tag.endswith("win_amd64"):
+              if platform_tag.endswith("win_amd64"):
+                  platform_kind = "win"
                   expected_suffix = ".pyd"
-              elif "manylinux" in tag:
+              elif "manylinux" in platform_tag:
+                  platform_kind = "linux"
                   expected_suffix = ".so"
+
+                  tokens = set(platform_tag.split("."))
+                  required_linux_tokens = {"manylinux2014_x86_64", "manylinux_2_17_x86_64"}
+                  if tokens != required_linux_tokens:
+                      raise SystemExit(
+                          f"Unexpected linux platform tag tokens in {wheel.name}: {sorted(tokens)}"
+                      )
               else:
                   raise SystemExit(f"Unsupported platform tag in wheel: {wheel.name}")
+
+              found_pairs.add((py_tag, abi_tag, platform_kind))
 
               with zipfile.ZipFile(wheel) as zf:
                   ext_files = [
@@ -247,11 +259,11 @@ jobs:
                       f"Wheel {wheel.name} expected extension {expected_suffix}, found {ext_files[0]}"
                   )
 
-          if found_tags != required_tags:
-              missing = sorted(required_tags - found_tags)
-              extra = sorted(found_tags - required_tags)
+          if found_pairs != required_pairs:
+              missing = sorted(required_pairs - found_pairs)
+              extra = sorted(found_pairs - required_pairs)
               raise SystemExit(
-                  f"Wheel tag set mismatch. Missing: {missing}; Extra: {extra}"
+                  f"Wheel pair set mismatch. Missing: {missing}; Extra: {extra}"
               )
 
           print("Validation passed: 10/10 wheels with one correct extension each.")
