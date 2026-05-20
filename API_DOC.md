@@ -30,7 +30,7 @@ sql = "SELECT * FROM users WHERE age > 18"
 parsed = Parsed(sql)
 
 # Get parsing results
-query = parsed.parsedforest[0]
+query = parsed.parsed_forest[0]
 print(query.parsed.sources)    # Data sources
 print(query.parsed.columns)    # Column information
 print(parsed.format())         # Formatted output
@@ -51,10 +51,11 @@ print(parsed.format())         # Formatted output
 - `pure` (bool, default=False): Whether to ignore comments
 
 **Main Attributes and Methods**:
-- `parsedforest`: Returns list of parsed statements
+- `parsed_forest`: Returns list of parsed statements
 - `statements`: All SQL statements
 - `tokens()`: Get lexical tokens
 - `AST()`: Get abstract syntax tree (JSON format)
+- `ast()`: Get decoded Python object (equivalent to `json.loads(AST())`)
 - `format(indent)`: Format SQL
 - `content()`: Get original SQL content
 - `name`: SQL statement name
@@ -67,7 +68,7 @@ sql = "SELECT u.id, u.name FROM users u WHERE u.age > 18"
 parsed = Parsed(sql)
 
 # Get parse tree
-items = parsed.parsedforest
+items = parsed.parsed_forest
 
 # Format
 formatted = parsed.format(indent="  ")
@@ -95,6 +96,7 @@ tokens = parsed.tokens()
 **Main Methods**:
 - `tokens()`: List[Token] - Get token list
 - `AST()`: str - Get JSON formatted AST
+- `ast()`: dict | list - Get decoded Python object
 - `format(indent: str = "    ")`: str - Format SQL
 
 **Example**:
@@ -375,7 +377,7 @@ LIMIT 10
 """
 
 parsed_multi = Parsed(sql)
-query: ParsedQuery = parsed_multi.parsedforest[0]
+query: ParsedQuery = parsed_multi.parsed_forest[0]
 parsed = query.parsed
 
 # Extract key information
@@ -527,7 +529,7 @@ print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ### Scenario 5: Handle Comments and Formatting
 
 ```python
-from fastsqlparse import Parsed, strip_note
+from fastsqlparse import Parsed, strip_comments
 
 sql = """
 -- This is the main comment for user query
@@ -549,7 +551,7 @@ print("\nFormatted result without comments:")
 print(parsed_pure.format())
 
 # Only remove comments (without formatting)
-stripped = strip_note(sql)
+stripped = strip_comments(sql)
 print("\nOnly remove comments:")
 print(stripped)
 ```
@@ -590,16 +592,17 @@ print(stripped)
 
 ### Utility Functions
 
-#### `strip_note(sql: str) -> str`
-Remove comments from SQL
+#### `strip_comments(sql: str) -> str`
+Remove SQL comments from SQL text.
 
 ```python
-from fastsqlparse import strip_note
+from fastsqlparse import strip_comments
 
 sql = "SELECT * FROM users -- comment"
-clean = strip_note(sql)
+clean = strip_comments(sql)
 # Result: "SELECT * FROM users"
 ```
+
 
 #### `format(sql: str, indent: str = "    ") -> str`
 Format SQL statement
@@ -697,6 +700,17 @@ ast_json_dic = parsed_query.ast()
 ast_obj = json.loads(ast_json_dic)
 ```
 
+Complete AST example for a simple SQL:
+
+```python
+import json
+from fastsqlparse import Parsed
+
+parsed = Parsed("SELECT a FROM t")
+full_ast = json.loads(parsed.AST())
+print(json.dumps(full_ast, indent=2, ensure_ascii=False))
+```
+
 ---
 
 ## Best Practices
@@ -748,7 +762,7 @@ if parsed.type == "query":
 from fastsqlparse import Parsed
 
 parsed = Parsed("SELECT * FROM t1; SELECT * FROM t2;")
-for stmt in parsed.parsedforest:
+for stmt in parsed.parsed_forest:
     print(stmt)
 ```
 

@@ -14,7 +14,8 @@ from typing import Any
 _pysqlparser: Any = import_module("fastsqlparse.pysqlparser")
 ParsedAbstract = _pysqlparser.AbstractStatement
 format = _pysqlparser.format
-strip_note = _pysqlparser.strip_note
+_strip_note = _pysqlparser.strip_note
+strip_comments = _strip_note
 
 tokenize: callable = ParsedAbstract.tokenize
 tokenize_query: callable = ParsedQuery.tokenize
@@ -39,9 +40,8 @@ __all__ = (
     "ParsedView",
     "ParsedUpdate",
     "ParsedDelete",
-    "ParsedSQL",
     "format",
-    "strip_note",
+    "strip_comments",
     "tokenize",
     "tokenize_query",
     "tokenize_insert",

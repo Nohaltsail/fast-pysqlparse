@@ -30,7 +30,7 @@ sql = "SELECT * FROM users WHERE age > 18"
 parsed = Parsed(sql)
 
 # 获取解析结果
-query = parsed.parsedforest[0]
+query = parsed.parsed_forest[0]
 print(query.parsed.sources)    # 数据源
 print(query.parsed.columns)    # 列信息
 print(parsed.format())         # 格式化输出
@@ -51,10 +51,11 @@ print(parsed.format())         # 格式化输出
 - `pure` (bool, default=False): 是否忽略注释
 
 **主要属性和方法**:
-- `parsedforest`: 返回解析后的语句列表
+- `parsed_forest`: 返回解析后的语句列表
 - `statements`: 所有SQL语句
 - `tokens()`: 获取词法单元
 - `AST()`: 获取抽象语法树（JSON格式）
+- `ast()`: 获取已解析的 Python 对象（等价于 `json.loads(AST())`）
 - `format(indent)`: 格式化SQL
 - `content()`: 获取原始SQL内容
 - `name`: SQL语句名称
@@ -67,7 +68,7 @@ sql = "SELECT u.id, u.name FROM users u WHERE u.age > 18"
 parsed = Parsed(sql)
 
 # 获取解析树
-items = parsed.parsedforest
+items = parsed.parsed_forest
 
 # 格式化
 formatted = parsed.format(indent="  ")
@@ -95,6 +96,7 @@ tokens = parsed.tokens()
 **主要方法**:
 - `tokens()`: List[Token] - 获取Token列表
 - `AST()`: str - 获取JSON格式的AST
+- `ast()`: dict | list - 获取已解析的 Python 对象
 - `format(indent: str = "    ")`: str - 格式化SQL
 
 **示例**:
@@ -375,7 +377,7 @@ LIMIT 10
 """
 
 parsed_multi = Parsed(sql)
-query: ParsedQuery = parsed_multi.parsedforest[0]
+query: ParsedQuery = parsed_multi.parsed_forest[0]
 parsed = query.parsed
 
 # 提取关键信息
@@ -527,7 +529,7 @@ print("parsed_query.parsed.columns:", parsed_query.parsed.columns)
 ### 场景5: 处理注释和格式化
 
 ```python
-from fastsqlparse import Parsed, strip_note
+from fastsqlparse import Parsed, strip_comments
 
 sql = """
 -- 这是用户查询的主注释
@@ -549,7 +551,7 @@ print("\n去掉注释的格式化结果:")
 print(parsed_pure.format())
 
 # 仅去除注释（不格式化）
-stripped = strip_note(sql)
+stripped = strip_comments(sql)
 print("\n仅去除注释:")
 print(stripped)
 ```
@@ -590,16 +592,17 @@ print(stripped)
 
 ### 工具函数
 
-#### `strip_note(sql: str) -> str`
-去除SQL中的注释
+#### `strip_comments(sql: str) -> str`
+去除 SQL 注释
 
 ```python
-from fastsqlparse import strip_note
+from fastsqlparse import strip_comments
 
 sql = "SELECT * FROM users -- comment"
-clean = strip_note(sql)
+clean = strip_comments(sql)
 # 结果: "SELECT * FROM users"
 ```
+
 
 #### `format(sql: str, indent: str = "    ") -> str`
 格式化SQL语句
@@ -696,6 +699,17 @@ ast_json_dic = parsed_query.ast()
 ast_obj = json.loads(ast_json_dic)
 ```
 
+简单 SQL 的完整 AST 示例：
+
+```python
+import json
+from fastsqlparse import Parsed
+
+parsed = Parsed("SELECT a FROM t")
+full_ast = json.loads(parsed.AST())
+print(json.dumps(full_ast, indent=2, ensure_ascii=False))
+```
+
 ---
 
 ## 最佳实践
@@ -747,7 +761,7 @@ if parsed.type == "query":
 from fastsqlparse import Parsed
 
 parsed = Parsed("SELECT * FROM t1; SELECT * FROM t2;")
-for stmt in parsed.parsedforest:
+for stmt in parsed.parsed_forest:
     print(stmt)
 ```
 

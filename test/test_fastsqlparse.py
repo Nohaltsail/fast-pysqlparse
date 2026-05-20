@@ -30,7 +30,7 @@ LIMIT 10
 """
 
     parsed_multi = Parsed(sql)
-    query: ParsedQuery = parsed_multi.parsedforest[0]
+    query: ParsedQuery = parsed_multi.parsed_forest[0]
     parsed = query.parsed
     print(f"parsed: {parsed}")
     print(f"原始SQL:\n{query.raw}")
@@ -221,8 +221,8 @@ WHERE u.status = 'active'  -- 只查活跃用户
     parsed_pure = Parsed(sql, pure=True)
     print(f"\n去掉注释的格式化结果:\n{parsed_pure.format()}")
 
-    # 使用strip_note函数
-    stripped = fastsqlparse.strip_note(sql)
+    # 使用strip_comments函数
+    stripped = fastsqlparse.strip_comments(sql)
     print(f"\n仅去除注释:\n{stripped}")
 
     return {
@@ -230,6 +230,19 @@ WHERE u.status = 'active'  -- 只查活跃用户
         'pure': parsed_pure,
         'stripped': stripped
     }
+
+
+def test_scenario7_simple_full_ast():
+    """场景7：简单SQL完整AST输出示例"""
+    print("\n【场景7】简单SQL完整AST输出")
+    print("-" * 80)
+
+    sql = "SELECT a FROM t"
+    parsed = Parsed(sql)
+    ast_obj = json.loads(parsed.AST())
+    print(json.dumps(ast_obj, indent=2, ensure_ascii=False))
+
+    return ast_obj
 
 
 def test_performance_comparison():
@@ -768,6 +781,7 @@ def run_all_tests():
     test_scenario4_insert_cte_select()
     test_scenario5_insert_cte_select()
     test_scenario6_comments_and_formatting()
+    test_scenario7_simple_full_ast()
 
     print("\n\n" + "=" * 80)
     print("二、性能验证")

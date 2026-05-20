@@ -1,4 +1,5 @@
 import os.path
+import json
 
 from fastsqlparse.conf import *
 from fastsqlparse import pysqlparser
@@ -19,6 +20,10 @@ class ParsedOne(pysqlparser.ParsedOne):
     """
     def __init__(self, sql_statement):
         super(ParsedOne, self).__init__(sql_statement)
+
+    def ast(self):
+        """Return decoded AST as Python object for convenience."""
+        return json.loads(self.AST())
 
     def AST(self) -> str:
         """
@@ -87,13 +92,13 @@ class Parsed(pysqlparser.Parsed):
         return super(Parsed, self).content()
 
     @property
-    def parsedforest(self) -> list[pysqlparser.AbstractStatement]:
+    def parsed_forest(self) -> list[pysqlparser.AbstractStatement]:
         """
         Get and return the sql parsed items attribute for the current object.
         :return: The initialized value of the _items attribute.
         """
         if self._items is None:
-            self._items = self.parsed_forest()
+            self._items = super(Parsed, self).parsed_forest()
         return self._items
 
     @property
@@ -120,6 +125,10 @@ class Parsed(pysqlparser.Parsed):
         :return: sql AST json string
         """
         return super(Parsed, self).AST()
+
+    def ast(self):
+        """Return decoded AST as Python object for convenience."""
+        return json.loads(self.AST())
 
     def format(self, indent=DEFAULT_FORMAT_INDENT*' ') -> str:
         """
