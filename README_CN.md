@@ -192,7 +192,7 @@ fast-pysqlparse采用分层架构设计：
 - 词法分析 (Lexer)
 - 语法分析 (Parser)
 - AST构建
-- 语义分析
+
 
 **技术栈**:
 - C++17标准
