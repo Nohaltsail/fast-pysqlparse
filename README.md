@@ -202,3 +202,5 @@ The corresponding C++ source code for these dynamic libraries is temporarily not
 
 For the full supplementary notice, see [LICENSE](LICENSE).
 
+**You can also use the dynamic libraries from the source code directly to develop your own SQL parsing library.**
+
