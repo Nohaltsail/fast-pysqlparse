@@ -37,7 +37,7 @@ class ParsedQuery(object):
         "available_cte"
     )
 
-    def __init__(self, statement: str, name: str, pure: bool = False):
+    def __init__(self, statement: str, name: str="main", pure: bool = False):
         """
         Initialize the Query object.
 
