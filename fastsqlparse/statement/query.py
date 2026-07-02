@@ -46,7 +46,7 @@ class ParsedQuery(object):
     def __init__(
             self,
             statement: str,
-            name: str,
+            name: str = "main",
             pure: bool = False,
             dialect: str = Dialects.ANSI.value
     ):
