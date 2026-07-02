@@ -10,6 +10,10 @@ from .statement import *
 from .parser import Parsed, ParsedOne
 from importlib import import_module
 from typing import Any
+from .conf import (
+    Dialects,
+    DialectType
+)
 
 _pysqlparser: Any = import_module("fastsqlparse.pysqlparser")
 ParsedAbstract = _pysqlparser.AbstractStatement

@@ -1,6 +1,11 @@
 from typing import Tuple, List, Any
 
 import fastsqlparse.pysqlparser as parser
+from fastsqlparse.conf import (
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedUpdate(object):
@@ -32,19 +37,28 @@ class ParsedUpdate(object):
         "tokens",
     )
 
-    def __init__(self, statement: str):
+    def __init__(
+            self,
+            statement: str,
+            pure: bool = False,
+            dialect: str = Dialects.ANSI.value
+    ):
         """
         Initialize an Update instance by parsing an SQL UPDATE statement.
 
         Args:
             statement: Complete SQL UPDATE statement to parse
                      Example: "UPDATE table SET col1=val1 WHERE condition"
-
+            pure: Controls SQL comment handling. True strips `--` and
+                `/* ... */` comments before parsing, so formatted output and
+                token results exclude comments and parsing may be faster.
+                False preserves comments.
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         Raises:
             SQLSyntaxError: If the input is not a valid UPDATE statement
         """
-        self.name = ""
-        self.__stmt__ = parser.update(statement)
+        self.dialect = dialect
+        self.__stmt__ = parser.update(statement, pure, dialect)
         for m in ParsedUpdate.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
         for n in ParsedUpdate.__attrs__:
@@ -52,7 +66,7 @@ class ParsedUpdate(object):
 
     def __repr__(self) -> str:
         """Official string representation of the Update instance."""
-        return repr(f"<class {self.__class__.__name__} name='{self.name}'>")
+        return repr(f"<class {self.__class__.__name__} name='{self.dialect}_UPDATE'>")
 
     def tokens(self) -> List[Any]:
         """
@@ -70,16 +84,16 @@ class ParsedUpdate(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
         """
         Perform lexical analysis of an UPDATE statement without full parsing.
 
         Args:
             statement: SQL UPDATE statement to tokenize
-
+            dialect: DialectType, default: DialectType.ANSI
         Returns:
             Tuple of tokens
 
         This provides faster analysis when only token-level information is needed.
         """
-        return parser.Update.tokenize(statement)
+        return parser.Update.tokenize(statement, dialect)

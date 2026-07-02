@@ -1,6 +1,11 @@
 from typing import List, Tuple, Any
 
-from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
+from fastsqlparse.conf import (
+    DEFAULT_FORMAT_INDENT,
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 import fastsqlparse.pysqlparser as parser
 
 
@@ -42,7 +47,7 @@ class ParsedCTE(object):
             self,
             statement: str,
             pure: bool = False,
-            name: str = None
+            dialect: str = Dialects.ANSI.value
     ):
         """
         Initialize a CTE parser instance.
@@ -53,10 +58,10 @@ class ParsedCTE(object):
                 `/* ... */` comments before parsing, so formatted output and
                 token results exclude comments and parsing may be faster.
                 False preserves comments.
-            name: Optional logical name for this CTE wrapper.
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
-        self.name = None or "WITH"
-        self.__stmt__ = parser.cte(statement, pure)
+        self.dialect = dialect
+        self.__stmt__ = parser.cte(statement, pure, dialect)
         for m in ParsedCTE.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
         for n in ParsedCTE.__attrs__:
@@ -64,7 +69,7 @@ class ParsedCTE(object):
 
     def __repr__(self) -> str:
         """Official string representation showing class and CTE identifier."""
-        return repr(f"<class {self.__class__.__name__} name='{self.name}'>")
+        return repr(f"<class {self.__class__.__name__} name='{self.dialect}_CTE'>")
 
     def format(self, indent: str = DEFAULT_FORMAT_INDENT*' ', init_indent: int = 0) -> str:
         """
@@ -106,16 +111,16 @@ class ParsedCTE(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
         """
         Perform lexical analysis of a WITH clause statement.
 
         Args:
             statement: SQL WITH clause statement to tokenize
-
+            dialect: DialectType, default: DialectType.ANSI
         Returns:
             return tokens of Statements
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.WithStatement.tokenize(statement)
+        return parser.WithStatement.tokenize(statement, dialect)

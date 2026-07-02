@@ -3,6 +3,12 @@ import json
 
 from fastsqlparse.conf import *
 from fastsqlparse import pysqlparser
+from fastsqlparse.conf import (
+    DEFAULT_FORMAT_INDENT,
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedOne(pysqlparser.ParsedOne):
@@ -14,12 +20,13 @@ class ParsedOne(pysqlparser.ParsedOne):
 
     Parameters:
         sql_statement: SQL statement string to be parsed
+        dialect: default: ansi. support: mysql/postgresql/sqlite/doris
 
     Note:
         If the input SQL string contains multiple statements, only the first valid statement will be parsed.
     """
-    def __init__(self, sql_statement):
-        super(ParsedOne, self).__init__(sql_statement)
+    def __init__(self, sql_statement, dialect=Dialects.ANSI.value):
+        super(ParsedOne, self).__init__(sql_statement, dialect)
 
     def ast(self):
         """Return decoded AST as Python object for convenience."""
@@ -61,6 +68,7 @@ class Parsed(pysqlparser.Parsed):
               comments are stripped before parsing so formatted output and
               tokens exclude comments and parsing may be faster. When False,
               comments are preserved.
+        dialect: default: ansi. support: mysql/postgresql/sqlite/doris
 
     Note:
         Either sql_statements or file must be provided.
@@ -73,17 +81,18 @@ class Parsed(pysqlparser.Parsed):
             sql_statements=None,
             file=None,
             name="",
-            pure=False
+            pure=False,
+            dialect=Dialects.ANSI.value
     ):
         if not sql_statements and not file:
             raise Exception("empty SQL statement or file")
         elif not file:
-            super(Parsed, self).__init__(sql_statements, pure, False, "", name)
+            super(Parsed, self).__init__(sql_statements, pure, False, "", name, dialect)
         elif not sql_statements:
             super(Parsed, self).__init__(file, pure, name)
         else:
             file_path = os.path.abspath(file)
-            super(Parsed, self).__init__(sql_statements, pure, True, file_path, name)
+            super(Parsed, self).__init__(sql_statements, pure, True, file_path, name, dialect)
         self._items = None
         self._statements = None
 

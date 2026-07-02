@@ -1,5 +1,11 @@
 from typing import List, Any, Tuple
 from fastsqlparse import pysqlparser as parser
+from fastsqlparse.conf import (
+    DEFAULT_FORMAT_INDENT,
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedQuery(object):
@@ -37,7 +43,13 @@ class ParsedQuery(object):
         "available_cte"
     )
 
-    def __init__(self, statement: str, name: str, pure: bool = False):
+    def __init__(
+            self,
+            statement: str,
+            name: str,
+            pure: bool = False,
+            dialect: str = Dialects.ANSI.value
+    ):
         """
         Initialize the Query object.
 
@@ -45,8 +57,9 @@ class ParsedQuery(object):
             statement (str): The SQL content to be parsed.
             name (str): The name associated with the SQL query.
             pure (bool): Parse SQL without note
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
-        self.__stmt__ = parser.query(statement, name, pure)
+        self.__stmt__ = parser.query(statement, name, pure, dialect)
         self._columns = None
         self.__init_items(self.__stmt__)
 
@@ -74,19 +87,19 @@ class ParsedQuery(object):
         return self._columns
 
     @staticmethod
-    def parse_dependence(statement: str) -> List[str]:
+    def parse_dependence(statement: str, dialect: str = Dialects.ANSI.value) -> List[str]:
         """
         Parse the dependencies of the SQL statement.
 
         Args:
             statement (str): The SQL statement to parse.
-
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         Returns:
             list: A list of dependencies.
         """
-        return parser.parse_dependence(statement)
+        return parser.parse_dependence(statement, dialect)
 
-    def format(self, indent: str = "    ", init_indent: int = 0) -> str:
+    def format(self, indent: str = DEFAULT_FORMAT_INDENT * " ", init_indent: int = 0) -> str:
         """
         Format the SQL query with indentation.
 
@@ -131,18 +144,18 @@ class ParsedQuery(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
         """
         Perform lexical analysis of a QUERY clause statement.
 
         Args:
             statement: SQL QUERY statement to tokenize
-
+            dialect: DialectType, default: DialectType.ANSI
         Returns:
             Tuple of tokens
 
         Note: This provides faster analysis than full parsing when only
               lexical information is required.
                 """
-        return parser.Dql.tokenize(statement)
+        return parser.Dql.tokenize(statement, dialect)
 

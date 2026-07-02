@@ -1,6 +1,11 @@
 from typing import Tuple, List, Any
 
 import fastsqlparse.pysqlparser as parser
+from fastsqlparse.conf import (
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedDelete(object):
@@ -24,16 +29,26 @@ class ParsedDelete(object):
         "tokens",
     )
 
-    def __init__(self, statement: str):
+    def __init__(
+            self,
+            statement: str,
+            pure: bool = False,
+            dialect: str = Dialects.ANSI.value
+    ):
         """
         Initialize a Delete instance by parsing an SQL DELETE statement.
 
         Args:
             statement: Complete SQL DELETE statement to parse
                      Example: "DELETE FROM employees WHERE status = 'inactive'"
+            pure: Controls SQL comment handling. True strips `--` and
+                `/* ... */` comments before parsing, so formatted output and
+                token results exclude comments and parsing may be faster.
+                False preserves comments.
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
-        self.name = ""
-        self.__stmt__ = parser.delete(statement)
+        self.dialect = dialect
+        self.__stmt__ = parser.delete(statement, pure, dialect)
         for m in ParsedDelete.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
         for n in ParsedDelete.__attrs__:
@@ -41,7 +56,7 @@ class ParsedDelete(object):
 
     def __repr__(self) -> str:
         """Official string representation of the Delete instance."""
-        return repr(f"<class {self.__class__.__name__} name='{self.name}'>")
+        return repr(f"<class {self.__class__.__name__} name='{self.dialect}_DELETE'>")
 
     def tokens(self) -> List[Any]:
         """
@@ -56,16 +71,16 @@ class ParsedDelete(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
         """
         Perform lightweight lexical analysis of a DELETE statement.
 
         Args:
             statement: SQL DELETE statement to tokenize
-
+            dialect: DialectType, default: DialectType.ANSI
         Returns:
             return tokens of Statements
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.Delete.tokenize(statement)
+        return parser.Delete.tokenize(statement, dialect)

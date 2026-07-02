@@ -1,7 +1,12 @@
 from typing import List, Any, Tuple
 
 import fastsqlparse.pysqlparser as parser
-from fastsqlparse.conf import DEFAULT_FORMAT_INDENT
+from fastsqlparse.conf import (
+    DEFAULT_FORMAT_INDENT,
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedInsert(object):
@@ -50,7 +55,12 @@ class ParsedInsert(object):
         "tokens"
     )
 
-    def __init__(self, statement: str, pure: bool = False):
+    def __init__(
+            self,
+            statement: str,
+            pure: bool = False,
+            dialect: str = Dialects.ANSI.value
+    ):
         """
         Initialize an Insert instance by parsing an SQL INSERT statement.
 
@@ -61,24 +71,22 @@ class ParsedInsert(object):
                        "INSERT INTO t1 SELECT * FROM t2"
             pure: If True, strips comments and non-essential elements during parsing.
                   Default False preserves original SQL structure.
-
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         Raises:
             SQLSyntaxError: For malformed INSERT statements
             ParserError: For unsupported INSERT variants
         """
-        self.__stmt__ = parser.insert(statement, pure)
-        self.name = ""
+        self.__stmt__ = parser.insert(statement, pure, dialect)
+        self.dialect = dialect
         for m in ParsedInsert.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
         for name in ParsedInsert.__attrs__:
             attr = getattr(self.__stmt__, name)
             setattr(self, name, attr)
-        self._stmt = ""
-        self._head = ""
 
     def __repr__(self) -> str:
         """Official string representation showing class and target table."""
-        return repr(f"<class {self.__class__.__name__} name='{self.name}'>")
+        return repr(f"<class {self.__class__.__name__} name='{self.dialect}_INSERT'>")
 
     def format(self, indent: str = DEFAULT_FORMAT_INDENT*' ', init_indent: int = 0) -> str:
         """
@@ -126,16 +134,16 @@ class ParsedInsert(object):
         pass
 
     @classmethod
-    def tokenize(cls, statement: str) -> List[Tuple[str, str, int]]:
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
         """
         Perform lightweight lexical analysis of an INSERT statement.
 
         Args:
             statement: SQL INSERT statement to tokenize
-
+            dialect: DialectType, default: DialectType.ANSI
         Returns:
             Tuple of tokens
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.Insert.tokenize(statement)
+        return parser.Insert.tokenize(statement, dialect)

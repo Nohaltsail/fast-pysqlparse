@@ -1,4 +1,10 @@
+from typing import List, Tuple, Any
 import fastsqlparse.pysqlparser as parser
+from fastsqlparse.conf import (
+    DialectType,
+    DIALECT_ANSI,
+    Dialects
+)
 
 
 class ParsedCreate(object):
@@ -28,16 +34,26 @@ class ParsedCreate(object):
         "ast",
     )
 
-    def __init__(self, statement: str):
+    def __init__(
+            self,
+            statement: str,
+            pure: bool = False,
+            dialect: str = Dialects.ANSI.value
+    ):
         """
         Initialize a TableDDL instance by parsing a CREATE TABLE statement.
 
         Args:
             statement: Complete SQL CREATE TABLE statement to parse
                      Example: "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100))"
+            pure: Controls SQL comment handling. True strips `--` and
+                `/* ... */` comments before parsing, so formatted output and
+                token results exclude comments and parsing may be faster.
+                False preserves comments.
+            dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
-        self.name = ""
-        self.__stmt__ = parser.create(statement)
+        self.dialect = dialect
+        self.__stmt__ = parser.create(statement, pure, dialect)
         for m in ParsedCreate.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))
         for n in ParsedCreate.__attrs__:
@@ -45,7 +61,7 @@ class ParsedCreate(object):
 
     def __repr__(self) -> str:
         """Official string representation of the TableDDL instance."""
-        return repr(f"<class {self.__class__.__name__} name='{self.name}'>")
+        return repr(f"<class {self.__class__.__name__} name='{self.dialect}_CREATE'>")
 
     def ast(self) -> str:
         """
@@ -59,3 +75,30 @@ class ParsedCreate(object):
             - Partitioning and table options if specified
         """
         pass
+
+    def tokens(self) -> List[Any]:
+        """
+        Retrieve lexical tokens from the parsed CREATE statement.
+
+        Returns:
+            List of token dictionaries containing:
+            - 'type': Token category (keyword, identifier, operator, etc.)
+            - 'value': The actual text value
+            - 'position': Tuple of (line_number, column_position)
+        """
+        pass
+
+    @classmethod
+    def tokenize(cls, statement: str, dialect: DialectType = DIALECT_ANSI) -> List[Tuple[str, str, int]]:
+        """
+        Perform lightweight lexical analysis of a CREATE statement.
+
+        Args:
+            statement: SQL CREATE statement to tokenize
+            dialect: DialectType, default: DialectType.ANSI
+        Returns:
+            return tokens of Statements
+
+        Useful for quick analysis without full parsing overhead.
+        """
+        return parser.Delete.tokenize(statement, dialect)
