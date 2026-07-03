@@ -577,16 +577,24 @@ print(stripped)
 - SQL length: 1359 characters
 - Test iterations: 100 times
 
+Results (`test/test_fastsqlparse.py`, 100 runs):
+
+| parser | total time | avg per parse | speedup |
+|--------|-----------|---------------|---------|
+| **fastsqlparse** | 0.0151s | 0.15ms | - |
+| sqlglot | 0.2811s | 2.81ms | 18.62x |
+| sqlparse | 0.8735s | 8.73ms | 57.86x |
+
 ### Performance Results
 
 test script：`test/python_parsers_10m.py`
 
 | parser             | interval | CPS |
 |--------------------|----------|-----|
-| **fastsqlparse**   | 1.3054s  | 7,660,928.40 |
-| pglast             | 4.3322s  | 2,308,429.85 |
-| sqlglot (postgres) | 22.9163s | 436,392.53 |
-| sqlparse           | 87.2098s | 114,671.60 |
+| **fastsqlparse**   | 0.7394s  | 13,524,892.44 |
+| pglast             | 4.8541s  | 2,060,217.57 |
+| sqlglot (postgres) | 20.5364s | 486,963.12 |
+| sqlparse           | 84.9591s | 117,709.35 |
 
 comment：
 - SQL length：10,000,484 chars
@@ -598,14 +606,14 @@ comment：
 
 #### Test 1: 5000 Iterations
 - SQL length: 639 characters
-- Total time: 0.6084s
-- **PPS (Parses Per Second): 8218.88**
-- Average per parse: 0.1217ms
+- Total time: 0.4832s
+- **PPS (Parses Per Second): 10347.38**
+- Average per parse: 0.0966ms
 
 #### Test 2: 10 Million Character SQL
 - SQL length: 10,500,998 characters
-- Total time: 1.4085s
-- **CPS (Characters Per Second): 7,455,540**
+- Total time: 0.5393s
+- **CPS (Characters Per Second): 19,472,920.75**
 - Parse successful!
 
 ---

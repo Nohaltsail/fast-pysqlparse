@@ -284,6 +284,7 @@ def test_scenario8_dialects():
    }
 
 
+def test_performance_comparison():
     """性能测试1：与sqlparse/sqlglot对比"""
     print("\n【性能测试1】解析速度对比 (1359字符SQL)")
     print("-" * 80)

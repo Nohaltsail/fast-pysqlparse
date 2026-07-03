@@ -1,5 +1,5 @@
 import os
-import pysqlparser
+from fastsqlparse import pysqlparser
 from enum import Enum
 
 __CURRENT_PATH__ = os.path.dirname(os.path.abspath(__file__))

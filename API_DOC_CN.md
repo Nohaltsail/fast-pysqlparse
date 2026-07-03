@@ -577,18 +577,26 @@ print(stripped)
 - SQL长度: 1359字符
 - 测试次数: 100次
 
+结果（`test/test_fastsqlparse.py`，100 次）：
+
+| 解析器 | 总耗时 | 平均每次 | 加速比 |
+|--------|--------|----------|--------|
+| **fastsqlparse** | 0.0151s | 0.15ms | - |
+| sqlglot | 0.2811s | 2.81ms | 18.62x |
+| sqlparse | 0.8735s | 8.73ms | 57.86x |
+
 ### 大规模测试
 
 #### 测试1: 5000次解析
 - SQL长度: 639字符
-- 总耗时: 0.6084秒
-- **PPS (Parses Per Second): 8218.88**
-- 平均每次: 0.1217ms
+- 总耗时: 0.4832秒
+- **PPS (Parses Per Second): 10347.38**
+- 平均每次: 0.0966ms
 
 #### 测试2: 1000万字符SQL
 - SQL长度: 10,500,998字符
-- 总耗时: 1.4085秒
-- **CPS (Characters Per Second): 7,455,540**
+- 总耗时: 0.5393秒
+- **CPS (Characters Per Second): 19,472,920.75**
 - 解析成功！
 
 #### 测试3: 仅 Python 四库对比（约 10M PostgreSQL SQL，不含 C 版本）
@@ -597,10 +605,10 @@ print(stripped)
 
 | 解析器 | 平均耗时 | CPS |
 |--------|----------|-----|
-| **fastsqlparse** | 1.3054s | 7,660,928.40 |
-| pglast | 4.3322s | 2,308,429.85 |
-| sqlglot (postgres) | 22.9163s | 436,392.53 |
-| sqlparse | 87.2098s | 114,671.60 |
+| **fastsqlparse** | 0.7394s | 13,524,892.44 |
+| pglast | 4.8541s | 2,060,217.57 |
+| sqlglot (postgres) | 20.5364s | 486,963.12 |
+| sqlparse | 84.9591s | 117,709.35 |
 
 说明：
 - SQL长度：10,000,484字符
