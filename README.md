@@ -1,25 +1,25 @@
 # fast-pysqlparse: High-Performance SQL Parsing Library
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-0.8-blue)]()
 [![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-purple)]()
 
 
 [README.md (Chinese)](https://github.com/Nohaltsail/fast-pysqlparse/blob/main/README_CN.md)
 
-A high-performance, cross-platform SQL parsing library, designed to handle the most complex SQL queries with ease.
+A high-performance, cross-platform, lightweight SQL parsing library whose core trait is **speed** — built on a C++17 core with native Python bindings, it rapidly performs structured parsing of SQL, especially statements with highly complex structure and deep nesting.
 
 ## Overview
 
-This library provides a robust set of tools for parsing and analyzing SQL statements. Built with a core engine in C++17 for maximum performance, it offers native Python bindings, making it the ideal choice for data-intensive applications where speed and accuracy are critical.
+fast-pysqlparse aims to overcome the performance and capability limits of traditional Python SQL parsers. By moving compute-intensive parsing into a native C++ layer, it maintains fast parsing even on large, deeply nested, structurally complex SQL.
 
-It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
-
-The parser is primarily tested against MySQL-style SQL. Supported dialects are exposed via the `Dialects` enum in `fastsqlparse.conf` (re-exported from `fastsqlparse`): `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Pass the desired dialect to any parser constructor or `tokenize`/`parse_dependence` method via the `dialect` parameter (default `ansi`).
+The parser primarily parses ANSI-style SQL. For statements with a specific dialect, specifying the dialect is recommended; supported dialects: MySQL, PostgreSQL, SQLite, Doris.
 
 ## Features
 
 - **Fast SQL Parsing**: Leverages a high-performance C++17 core to parse SQL statements rapidly
+- **Structured Parsing**: Oriented toward complex structure and deep nesting, especially statements mixing CTEs with SELECT/INSERT/VIEW
 - **Cross-Platform**: Compiled into native extensions (.pyd for Windows, .so for Linux)
 - **Comprehensive SQL Support**: Supports a wide range of SQL statements, including:
   - SELECT (with complex JOIN, WHERE, GROUP BY, subqueries, etc.)
