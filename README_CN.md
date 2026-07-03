@@ -26,7 +26,7 @@
 
 fast-pysqlparse是一个高性能SQL解析库，旨在解决传统Python SQL解析器在性能和功能上的局限。通过将计算密集型的解析工作移至原生C++层，在处理大型复杂SQL脚本时，尤其是深度嵌套查询的SQL时展现出卓越的性能表现。
 
-解析器主要针对 MySQL 风格 SQL 进行测试；当前支持的方言名称可在 `fastsqlparse.conf.SUPPORT_DIALECTS` 中查看。
+解析器主要针对 MySQL 风格 SQL 进行测试；支持的方言通过 `fastsqlparse.conf` 中的 `Dialects` 枚举暴露（并由 `fastsqlparse` 重新导出）：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。通过任意解析器构造函数或 `tokenize`/`parse_dependence` 方法的 `dialect` 参数指定方言（默认 `ansi`）。
 
 ### 设计理念
 
@@ -746,7 +746,8 @@ parsed = Parsed(
     sql_statements: str,  # SQL字符串
     file: str = None,     # 可选：SQL文件路径
     name: str = None,     # 可选：名称标识
-    pure: bool = False    # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    pure: bool = False,   # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    dialect: str = "ansi" # SQL 方言：ansi/mysql/postgresql/sqlite/doris
 )
 ```
 
@@ -768,6 +769,7 @@ from fastsqlparse import ParsedOne
 
 parsed = ParsedOne(
     sql_statements: str,  # SQL字符串
+    dialect: str = "ansi" # SQL 方言：ansi/mysql/postgresql/sqlite/doris
 )
 ```
 
@@ -788,7 +790,8 @@ from fastsqlparse import ParsedQuery
 query = ParsedQuery(
     statement: str,  # SELECT语句
     name: str = None,
-    pure: bool = False    # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    pure: bool = False,    # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    dialect: str = "ansi"  # SQL 方言：ansi/mysql/postgresql/sqlite/doris
 )
 ```
 
@@ -814,7 +817,8 @@ query = ParsedQuery(
     - `unions`: List[ParsedQuery | str] - UNION查询列表
 
 **静态方法**:
-- `tokenize(statement: str)`: List[Tuple[str, str, int]] - 快速词法分析
+- `tokenize(statement: str, dialect: DialectType = DialectType.ANSI)`: List[Tuple[str, str, int]] - 快速词法分析
+- `parse_dependence(statement: str, dialect: str = "ansi")`: List[str] - 提取表血缘/依赖
 
 #### ParsedInsert - INSERT专用解析器
 
@@ -823,7 +827,8 @@ from fastsqlparse import ParsedInsert
 
 insert = ParsedInsert(
     statement: str,  # INSERT语句
-    pure: bool = False    # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    pure: bool = False,    # 控制注释处理：True 去除 `--`/`/* ... */` 注释；False 保留注释
+    dialect: str = "ansi"  # SQL 方言：ansi/mysql/postgresql/sqlite/doris
 )
 ```
 
@@ -839,7 +844,7 @@ insert = ParsedInsert(
 - `query_stmt`: str - 查询语句
 
 **静态方法**:
-- `tokenize(statement: str)`: List[Tuple[str, str, int]]
+- `tokenize(statement: str, dialect: DialectType = DialectType.ANSI)`: List[Tuple[str, str, int]]
 
 ### 工具函数
 
@@ -866,13 +871,28 @@ from fastsqlparse import (
     tokenize_view
 )
 
-# 通用tokenizer
+# 通用tokenizer（dialect 为 DialectType，默认 DialectType.ANSI）
 tokens = tokenize(sql)
 
 # 专用tokenizer (更快)
-tokens = tokenize_query("SELECT * FROM users")
+tokens = tokenize_query("SELECT * FROM users", dialect=DialectType.MYSQL)
 tokens = tokenize_cte("WITH cte AS (...)")
 tokens = tokenize_insert("INSERT INTO ...")
+```
+
+### 方言（Dialects）
+
+`dialect` 用于指定解析与词法分析的 SQL 方言（默认 `"ansi"`）。所有解析器构造函数接受字符串形式的 `dialect`；`tokenize` 类方法与 `ParsedQuery.parse_dependence` 接受 `DialectType`（默认 `DialectType.ANSI`）。
+
+支持的方言：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`（见 `fastsqlparse.conf` 中的 `Dialects` 枚举与 `DIALECT_*` 常量）。
+
+```python
+from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
+
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)          # "mysql"
+query = ParsedQuery(sql, "q", dialect="postgresql")
+ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)        # 类型化 DialectType
+ParsedQuery.parse_dependence(sql, dialect="mysql")
 ```
 
 ### Token结构

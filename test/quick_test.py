@@ -1,4 +1,4 @@
-from fastsqlparse import Parsed, ParsedQuery
+from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
 
 if __name__ == '__main__':
     sql = """
@@ -43,12 +43,14 @@ LIMIT 50, 100"""
     print("sql length: ", sql_len)
 
     # parse sql statements to SQL object (ParsedSQL remains a legacy alias of Parsed)
-    sql_stmt = Parsed(sql)
+    # dialect selects SQL dialect (default "ansi"; supports mysql/postgresql/sqlite/doris)
+    sql_stmt = Parsed(sql, dialect=Dialects.MYSQL.value)
     # Format and print the SQL statement with proper indentation
     print(sql_stmt.format())  # Output formatted SQL statement
 
     # Tokenization - returns list of tuples containing (token_value, token_type, position)
-    tokens = ParsedQuery.tokenize(sql)  # Get tuple list of token information (token_value, token_type, position)
+    # tokenize accepts a DialectType (default DialectType.ANSI)
+    tokens = ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)  # Get tuple list of token information (token_value, token_type, position)
 
     # Alternative tokenization - returns list of token objects with attributes
     token_obj_list = sql_stmt.tokens()  # Get object list of token information
@@ -57,4 +59,4 @@ LIMIT 50, 100"""
     print(sql_stmt.AST())  # Get JSON structure of the SQL statement
 
     # Extract table lineage/dependencies from the query
-    src_tables = ParsedQuery.parse_dependence(sql)  # Get source tables (dependencies) of the query
+    src_tables = ParsedQuery.parse_dependence(sql, dialect="mysql")  # Get source tables (dependencies) of the query

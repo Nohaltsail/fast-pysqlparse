@@ -20,14 +20,14 @@ pip install fast-pysqlparse
 
 ## Quick Start
 
-> The parser is primarily tested against MySQL-style SQL. Current supported dialect names are exposed in `fastsqlparse.conf.SUPPORT_DIALECTS`.
+> The parser is primarily tested against MySQL-style SQL. Supported dialects are exposed via the `Dialects` enum in `fastsqlparse.conf` (and re-exported from `fastsqlparse`): `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Pass the desired dialect to any parser constructor or `tokenize`/`parse_dependence` method via the `dialect` parameter (default `ansi`).
 
 ```python
-from fastsqlparse import Parsed, ParsedQuery
+from fastsqlparse import Parsed, ParsedQuery, Dialects
 
 # Parse SQL
 sql = "SELECT * FROM users WHERE age > 18"
-parsed = Parsed(sql)
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)
 
 # Get parsing results
 query = parsed.parsed_forest[0]
@@ -49,6 +49,7 @@ print(parsed.format())         # Formatted output
 - `file` (str, optional): SQL file path
 - `name` (str, optional): Name identifier for the parsed content
 - `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
+- `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
 **Main Attributes and Methods**:
 - `parsed_forest`: Returns list of parsed statements
@@ -88,6 +89,7 @@ tokens = parsed.tokens()
 
 **Parameters**:
 - `sql_statements` (str): SQL statement string
+- `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
 **Main Attributes**:
 - `parsed`: AbstractParsed - Parsed structure object (could be ParsedQuery, ParsedInsert, etc.)
@@ -125,6 +127,7 @@ elif parsed.type == "insert":
 - `statement` (str): SELECT statement
 - `name` (str): Query name identifier
 - `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
+- `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
 **Main Attributes**:
 - `name`: str - Statement name identifier
@@ -152,7 +155,7 @@ elif parsed.type == "insert":
 - `ast()`: Generate AST
 - `tokens()`: Get Tokens
 - `available_cte()`: Get all CTEs available in current query scope. These CTEs typically come from ancestor ParsedQuery/ParsedInsert objects, including WITH clauses defined in current and parent queries. Returns a dictionary with CTE names as keys and ParsedCTE objects as values.
-- `tokenize(statement)`: Static method for fast lexical analysis
+- `tokenize(statement, dialect=DialectType.ANSI)`: Static method for fast lexical analysis. `dialect` is a `DialectType` (default `DialectType.ANSI`).
 
 **Example**:
 ```python
@@ -202,17 +205,17 @@ for token_value, token_type, pos in tokens[:5]:
 **Parameters**:
 - `statement` (str): WITH statement
 - `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
-- `name` (str, optional): CTE name
+- `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
 **Main Attributes**:
 - `raw`: Raw CTE statement
 - `units`: List of CTE statements
-- `name`: CTE name
+- `dialect`: Dialect used for parsing
 
 **Main Methods**:
 - `format(indent, init_indent)`: Format CTE
 - `ast()`: Generate AST
-- `tokenize(statement)`: Static method for fast lexical analysis
+- `tokenize(statement, dialect=DialectType.ANSI)`: Static method for fast lexical analysis. `dialect` is a `DialectType` (default `DialectType.ANSI`).
 
 **Example**:
 ```python
@@ -258,6 +261,7 @@ if query.cte:
 **Parameters**:
 - `statement` (str): INSERT statement
 - `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
+- `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
 **Main Attributes**:
 - `name`: str - Target table name
@@ -274,7 +278,7 @@ if query.cte:
 - `format(indent, init_indent)`: Format
 - `ast()`: Generate AST
 - `tokens()`: Get Tokens
-- `tokenize(statement)`: Static method for fast lexical analysis
+- `tokenize(statement, dialect=DialectType.ANSI)`: Static method for fast lexical analysis. `dialect` is a `DialectType` (default `DialectType.ANSI`).
 
 **Example**:
 ```python
@@ -318,12 +322,14 @@ if insert2.query:
 
 ### 5. Other Parser Classes
 
+All classes below accept `pure` (bool, default `False`) and `dialect` (str, default `"ansi"`) in their constructors, plus a `tokenize(statement, dialect=DialectType.ANSI)` classmethod for fast lexical analysis.
+
 #### ParsedView - VIEW Parser
 ```python
 from fastsqlparse import ParsedView
 
 sql = "CREATE VIEW active_users AS SELECT * FROM users WHERE status='active'"
-view = ParsedView(sql)
+view = ParsedView(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedUpdate - UPDATE Parser
@@ -331,7 +337,7 @@ view = ParsedView(sql)
 from fastsqlparse import ParsedUpdate
 
 sql = "UPDATE users SET status='inactive' WHERE last_login < '2023-01-01'"
-update = ParsedUpdate(sql)
+update = ParsedUpdate(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedDelete - DELETE Parser
@@ -339,7 +345,7 @@ update = ParsedUpdate(sql)
 from fastsqlparse import ParsedDelete
 
 sql = "DELETE FROM logs WHERE created_at < '2023-01-01'"
-delete = ParsedDelete(sql)
+delete = ParsedDelete(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedCreate - CREATE TABLE Parser
@@ -353,8 +359,15 @@ CREATE TABLE users (
     email VARCHAR(200)
 )
 """
-create = ParsedCreate(sql)
+create = ParsedCreate(sql, pure=False, dialect="mysql")
+
+# Lexical tokens of the CREATE statement
+toks = create.tokens()
+# Fast lexical analysis without full parsing
+toks = ParsedCreate.tokenize(sql, dialect=DialectType.MYSQL)
 ```
+
+> Note: `ParsedCreate.tokens()` extracts lexical tokens from the parsed CREATE statement; `ParsedCreate.tokenize(statement, dialect)` performs lightweight lexical analysis directly on a CREATE statement string.
 
 ---
 
@@ -599,6 +612,34 @@ comment：
 
 ## API Reference
 
+### Dialects
+
+The parser supports multiple SQL dialects via the `dialect` parameter (default `"ansi"`). Every parser constructor (`Parsed`, `ParsedOne`, `ParsedQuery`, `ParsedInsert`, `ParsedCTE`, `ParsedUpdate`, `ParsedDelete`, `ParsedView`, `ParsedCreate`) accepts `dialect` as a string; `tokenize(...)` classmethods and `ParsedQuery.parse_dependence(...)` accept `dialect` as a `DialectType` (default `DialectType.ANSI`).
+
+Supported dialects (exposed via the `Dialects` enum, re-exported from `fastsqlparse`):
+
+| `Dialects` member | `.value` | `DialectType` constant |
+|-------------------|----------|------------------------|
+| `Dialects.ANSI` | `"ansi"` | `DIALECT_ANSI` |
+| `Dialects.MYSQL` | `"mysql"` | `DIALECT_MYSQL` |
+| `Dialects.POSTGRESQL` | `"postgresql"` | `DIALECT_POSTGRESQL` |
+| `Dialects.SQLITE` | `"sqlite"` | `DIALECT_SQLITE` |
+| `Dialects.DORIS` | `"doris"` | `DIALECT_DORIS` |
+
+`DialectType` is an alias of `pysqlparser.DIALECT` and is used wherever a typed dialect selector is required (e.g. `tokenize`). `Dialects.<NAME>.value` gives the string form accepted by constructors.
+
+```python
+from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
+
+# String dialect for constructors
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)          # "mysql"
+query = ParsedQuery(sql, "q", dialect="postgresql")
+
+# Typed DialectType for tokenize / parse_dependence
+ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)
+ParsedQuery.parse_dependence(sql, dialect="mysql")
+```
+
 ### Utility Functions
 
 #### `strip_comments(sql: str) -> str`
@@ -623,33 +664,33 @@ sql = "SELECT * FROM users WHERE id=1"
 formatted = format(sql, indent="  ")
 ```
 
-#### `tokenize(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Lexical analysis
 
 Returned tuples follow the order `(token_value, token_type, position)`.
 
-#### `tokenize_query(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_query(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for SELECT statements
 
 ```python
-from fastsqlparse import tokenize_query
+from fastsqlparse import tokenize_query, DialectType
 
-tokens = tokenize_query("SELECT * FROM users")
+tokens = tokenize_query("SELECT * FROM users", dialect=DialectType.MYSQL)
 ```
 
-#### `tokenize_cte(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_cte(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for WITH statements
 
-#### `tokenize_insert(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_insert(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for INSERT statements
 
-#### `tokenize_update(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_update(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for UPDATE statements
 
-#### `tokenize_delete(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_delete(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for DELETE statements
 
-#### `tokenize_view(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_view(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 Fast lexical analysis for VIEW statements
 
 ---

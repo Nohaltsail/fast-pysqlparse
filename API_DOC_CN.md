@@ -20,14 +20,14 @@ pip install fast-pysqlparse
 
 ## 快速开始
 
-> 解析器主要针对 MySQL 风格 SQL 进行测试；当前支持的方言名称可在 `fastsqlparse.conf.SUPPORT_DIALECTS` 中查看。
+> 解析器主要针对 MySQL 风格 SQL 进行测试；支持的方言通过 `fastsqlparse.conf` 中的 `Dialects` 枚举暴露（并由 `fastsqlparse` 重新导出）：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。通过任意解析器构造函数或 `tokenize`/`parse_dependence` 方法的 `dialect` 参数指定方言（默认 `ansi`）。
 
 ```python
-from fastsqlparse import Parsed, ParsedQuery
+from fastsqlparse import Parsed, ParsedQuery, Dialects
 
 # 解析SQL
 sql = "SELECT * FROM users WHERE age > 18"
-parsed = Parsed(sql)
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)
 
 # 获取解析结果
 query = parsed.parsed_forest[0]
@@ -49,6 +49,7 @@ print(parsed.format())         # 格式化输出
 - `file` (str, optional): SQL文件路径
 - `name` (str, optional): 解析内容名称
 - `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
+- `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
 **主要属性和方法**:
 - `parsed_forest`: 返回解析后的语句列表
@@ -88,6 +89,7 @@ tokens = parsed.tokens()
 
 **参数**:
 - `sql_statements` (str): SQL语句字符串
+- `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
 **主要属性**:
 - `parsed`: AbstractParsed - 解析后的结构对象（可能是ParsedQuery、ParsedInsert等）
@@ -125,6 +127,7 @@ elif parsed.type == "insert":
 - `statement` (str): SELECT语句
 - `name` (str): 查询名称标识
 - `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
+- `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
 **主要属性**:
 - `name`: str - 语句名称标识
@@ -152,7 +155,7 @@ elif parsed.type == "insert":
 - `ast()`: 生成AST
 - `tokens()`: 获取Tokens
 - `available_cte()`: 获取当前查询作用域内可用的所有CTE。这些CTE通常来自于祖先ParsedQuery/ParsedInsert对象，包括当前查询和父级查询中定义的WITH子句。返回一个字典，键为CTE名称，值为ParsedCTE对象。
-- `tokenize(statement)`: 静态方法，快速词法分析
+- `tokenize(statement, dialect=DialectType.ANSI)`: 静态方法，快速词法分析。`dialect` 为 `DialectType`（默认 `DialectType.ANSI`）。
 
 **示例**:
 ```python
@@ -202,17 +205,17 @@ for token_value, token_type, pos in tokens[:5]:
 **参数**:
 - `statement` (str): WITH语句
 - `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
-- `name` (str, optional): CTE名称
+- `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
 **主要属性**:
 - `raw`: 原始CTE语句
 - `units`: CTE语句列表
-- `name`: CTE名称
+- `dialect`: 解析使用的方言
 
 **主要方法**:
 - `format(indent, init_indent)`: 格式化CTE
 - `ast()`: 生成AST
-- `tokenize(statement)`: 静态方法，快速词法分析
+- `tokenize(statement, dialect=DialectType.ANSI)`: 静态方法，快速词法分析。`dialect` 为 `DialectType`（默认 `DialectType.ANSI`）。
 
 **示例**:
 ```python
@@ -258,6 +261,7 @@ if query.cte:
 **参数**:
 - `statement` (str): INSERT语句
 - `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
+- `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
 **主要属性**:
 - `name`: str - 目标表名
@@ -274,7 +278,7 @@ if query.cte:
 - `format(indent, init_indent)`: 格式化
 - `ast()`: 生成AST
 - `tokens()`: 获取Tokens
-- `tokenize(statement)`: 静态方法，快速词法分析
+- `tokenize(statement, dialect=DialectType.ANSI)`: 静态方法，快速词法分析。`dialect` 为 `DialectType`（默认 `DialectType.ANSI`）。
 
 **示例**:
 ```python
@@ -318,12 +322,14 @@ if insert2.query:
 
 ### 5. 其他解析器类
 
+以下类的构造函数均接受 `pure`（bool，默认 `False`）与 `dialect`（str，默认 `"ansi"`），并提供 `tokenize(statement, dialect=DialectType.ANSI)` 类方法用于快速词法分析。
+
 #### ParsedView - VIEW解析器
 ```python
 from fastsqlparse import ParsedView
 
 sql = "CREATE VIEW active_users AS SELECT * FROM users WHERE status='active'"
-view = ParsedView(sql)
+view = ParsedView(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedUpdate - UPDATE解析器
@@ -331,7 +337,7 @@ view = ParsedView(sql)
 from fastsqlparse import ParsedUpdate
 
 sql = "UPDATE users SET status='inactive' WHERE last_login < '2023-01-01'"
-update = ParsedUpdate(sql)
+update = ParsedUpdate(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedDelete - DELETE解析器
@@ -339,7 +345,7 @@ update = ParsedUpdate(sql)
 from fastsqlparse import ParsedDelete
 
 sql = "DELETE FROM logs WHERE created_at < '2023-01-01'"
-delete = ParsedDelete(sql)
+delete = ParsedDelete(sql, pure=False, dialect="mysql")
 ```
 
 #### ParsedCreate - CREATE TABLE解析器
@@ -353,8 +359,15 @@ CREATE TABLE users (
     email VARCHAR(200)
 )
 """
-create = ParsedCreate(sql)
+create = ParsedCreate(sql, pure=False, dialect="mysql")
+
+# 提取 CREATE 语句的词法 tokens
+toks = create.tokens()
+# 直接对 CREATE 语句字符串进行快速词法分析
+toks = ParsedCreate.tokenize(sql, dialect=DialectType.MYSQL)
 ```
+
+> 说明：`ParsedCreate.tokens()` 提取已解析 CREATE 语句的词法 tokens；`ParsedCreate.tokenize(statement, dialect)` 对 CREATE 语句字符串进行轻量词法分析。
 
 ---
 
@@ -598,6 +611,34 @@ print(stripped)
 
 ## API参考
 
+### 方言（Dialects）
+
+解析器通过 `dialect` 参数（默认 `"ansi"`）支持多种 SQL 方言。所有解析器构造函数（`Parsed`、`ParsedOne`、`ParsedQuery`、`ParsedInsert`、`ParsedCTE`、`ParsedUpdate`、`ParsedDelete`、`ParsedView`、`ParsedCreate`）均接受字符串形式的 `dialect`；`tokenize(...)` 类方法与 `ParsedQuery.parse_dependence(...)` 接受 `DialectType` 类型的 `dialect`（默认 `DialectType.ANSI`）。
+
+支持的方言（通过 `Dialects` 枚举暴露，并由 `fastsqlparse` 重新导出）：
+
+| `Dialects` 成员 | `.value` | `DialectType` 常量 |
+|-------------------|----------|------------------------|
+| `Dialects.ANSI` | `"ansi"` | `DIALECT_ANSI` |
+| `Dialects.MYSQL` | `"mysql"` | `DIALECT_MYSQL` |
+| `Dialects.POSTGRESQL` | `"postgresql"` | `DIALECT_POSTGRESQL` |
+| `Dialects.SQLITE` | `"sqlite"` | `DIALECT_SQLITE` |
+| `Dialects.DORIS` | `"doris"` | `DIALECT_DORIS` |
+
+`DialectType` 是 `pysqlparser.DIALECT` 的别名，用于需要类型化方言选择器的场合（如 `tokenize`）。`Dialects.<NAME>.value` 返回构造函数接受的字符串形式。
+
+```python
+from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
+
+# 构造函数使用字符串方言
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)          # "mysql"
+query = ParsedQuery(sql, "q", dialect="postgresql")
+
+# tokenize / parse_dependence 使用 DialectType
+ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)
+ParsedQuery.parse_dependence(sql, dialect="mysql")
+```
+
 ### 工具函数
 
 #### `strip_comments(sql: str) -> str`
@@ -621,33 +662,33 @@ from fastsqlparse import format
 sql = "SELECT * FROM users WHERE id=1"
 formatted = format(sql, indent="  ")
 ```
-#### `tokenize(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 词法分析
 
 返回的元组顺序为 `(token_value, token_type, position)`。
 
-#### `tokenize_query(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_query(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析SELECT语句
 
 ```python
-from fastsqlparse import tokenize_query
+from fastsqlparse import tokenize_query, DialectType
 
-tokens = tokenize_query("SELECT * FROM users")
+tokens = tokenize_query("SELECT * FROM users", dialect=DialectType.MYSQL)
 ```
 
-#### `tokenize_cte(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_cte(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析WITH语句
 
-#### `tokenize_insert(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_insert(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析INSERT语句
 
-#### `tokenize_update(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_update(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析UPDATE语句
 
-#### `tokenize_delete(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_delete(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析DELETE语句
 
-#### `tokenize_view(sql: str) -> List[Tuple[str, str, int]]`
+#### `tokenize_view(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 快速词法分析VIEW语句
 
 ---

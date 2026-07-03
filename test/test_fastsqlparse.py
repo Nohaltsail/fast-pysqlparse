@@ -7,7 +7,9 @@ from fastsqlparse import (
     Parsed,
     ParsedOne,
     ParsedQuery,
-    ParsedInsert
+    ParsedInsert,
+    Dialects,
+    DialectType,
 )
 import json
 import time
@@ -245,7 +247,43 @@ def test_scenario7_simple_full_ast():
     return ast_obj
 
 
-def test_performance_comparison():
+def test_scenario8_dialects():
+    """场景8：方言（dialect）参数演示"""
+    print("\n【场景8】方言（dialect）参数演示")
+    print("-" * 80)
+
+    sql = "SELECT * FROM users WHERE age > 18"
+
+    # 1) 字符串方言：构造器接受 dialect 字符串（默认 ansi）
+    parsed_mysql = ParsedOne(sql, dialect=Dialects.MYSQL.value)
+    print(f"dialect=mysql, type={parsed_mysql.type}")
+    print(f"repr: {repr(parsed_mysql)}")
+
+    # 2) Dialects 枚举取值
+    print(f"可选方言: {[d.value for d in Dialects]}")
+
+    # 3) Parsed / ParsedQuery 支持 dialect
+    parsed_multi = Parsed(sql, dialect="postgresql")
+    print(f"Parsed(dialect=postgresql): {parsed_multi.parsed_forest[0].parsed}")
+
+    query = ParsedQuery(sql, "q", dialect="mysql")
+    print(f"ParsedQuery(dialect=mysql): {query.parsed}")
+
+    # 4) parse_dependence 支持 dialect
+    deps = ParsedQuery.parse_dependence(sql, dialect="mysql")
+    print(f"parse_dependence(dialect=mysql): {deps}")
+
+    # 5) tokenize 接受 DialectType（默认 DialectType.ANSI）
+    tokens = ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)
+    print(f"tokenize(dialect=DialectType.MYSQL) 前3个token: {tokens[:3]}")
+
+    return {
+        'dialects': [d.value for d in Dialects],
+        'mysql_type': parsed_mysql.type,
+        'deps': deps,
+   }
+
+
     """性能测试1：与sqlparse/sqlglot对比"""
     print("\n【性能测试1】解析速度对比 (1359字符SQL)")
     print("-" * 80)
@@ -782,6 +820,7 @@ def run_all_tests():
     test_scenario5_insert_cte_select()
     test_scenario6_comments_and_formatting()
     test_scenario7_simple_full_ast()
+    test_scenario8_dialects()
 
     print("\n\n" + "=" * 80)
     print("二、性能验证")

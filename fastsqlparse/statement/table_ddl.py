@@ -32,6 +32,7 @@ class ParsedCreate(object):
 
     __callables__ = (
         "ast",
+        "tokens",
     )
 
     def __init__(
@@ -101,4 +102,4 @@ class ParsedCreate(object):
 
         Useful for quick analysis without full parsing overhead.
         """
-        return parser.Delete.tokenize(statement, dialect)
+        return parser.Create.tokenize(statement, dialect)

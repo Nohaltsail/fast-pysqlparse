@@ -15,7 +15,7 @@ This library provides a robust set of tools for parsing and analyzing SQL statem
 
 It excels at parsing extremely long SQL statements and queries with deeply nested subqueries, delivering performance far superior to pure-Python alternatives.
 
-The parser is primarily tested against MySQL-style SQL. Current supported dialect names are exposed in `fastsqlparse.conf.SUPPORT_DIALECTS`.
+The parser is primarily tested against MySQL-style SQL. Supported dialects are exposed via the `Dialects` enum in `fastsqlparse.conf` (re-exported from `fastsqlparse`): `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Pass the desired dialect to any parser constructor or `tokenize`/`parse_dependence` method via the `dialect` parameter (default `ansi`).
 
 ## Features
 
@@ -154,7 +154,8 @@ LIMIT 50, 100"""
 ### Comment Handling (`pure`)
 
 `pure` controls SQL comment handling in parser constructors such as `Parsed`,
-`ParsedQuery`, `ParsedInsert`, `ParsedCTE`, and `ParsedView`.
+`ParsedQuery`, `ParsedInsert`, `ParsedCTE`, `ParsedUpdate`, `ParsedDelete`,
+`ParsedView`, and `ParsedCreate`.
 
 - `pure=False` (default): keep comments in parsing/formatting output.
 - `pure=True`: strip `--` and `/* ... */` comments before parsing; formatted
@@ -165,6 +166,25 @@ from fastsqlparse import Parsed
 
 parsed_keep = Parsed(sql, pure=False)  # preserve comments
 parsed_clean = Parsed(sql, pure=True)  # strip comments before parse
+```
+
+### Dialects (`dialect`)
+
+`dialect` selects the SQL dialect for parsing and lexical analysis (default
+`"ansi"`). Every parser constructor accepts `dialect` as a string; `tokenize`
+classmethods and `ParsedQuery.parse_dependence` accept a `DialectType`
+(default `DialectType.ANSI`).
+
+Supported dialects: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`
+(see the `Dialects` enum and the `DIALECT_*` constants in `fastsqlparse.conf`).
+
+```python
+from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
+
+parsed = Parsed(sql, dialect=Dialects.MYSQL.value)          # "mysql"
+query = ParsedQuery(sql, "q", dialect="postgresql")
+ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)        # typed DialectType
+ParsedQuery.parse_dependence(sql, dialect="mysql")
 ```
 
 ## When to Use Which Parser
