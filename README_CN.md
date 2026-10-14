@@ -44,11 +44,11 @@ fast-pysqlparse 旨在解决传统 Python SQL 解析器在性能与功能上的�
 ### 性能突破
 
 **超高速解析能力** 
-- **对比sqlparse**: 快 **~115x**
-- **对比sqlglot**: 快 **~28x**
-- **对比pglast(底层为C编译的动态库)**: 快 **~6.5x**
+- **对比sqlparse**: 快 **~200x**
+- **对比sqlglot**: 快 **~80x**
+- **对比pglast(底层为C编译的动态库)**: 快 **~15x**
 - **吞吐量**: ~10300 PPS (Parses Per Second)
-- **大文件处理**: 1000万字符SQL仅需约0.5秒 (~19,500,000 CPS)
+- **大文件处理**: 1000万字符SQL仅需约百毫秒级 (~20,000,000 CPS)
 
 ### 新增核心功能
 
@@ -160,30 +160,30 @@ insert = ParsedInsert("INSERT INTO users VALUES (1, 'Alice')")
 `可以运行测试用例：test/test_fastsqlparse.py验证`
 #### 测试1: 高并发解析 (5000次)
 - **SQL长度**: 639字符
-- **总耗时**: 0.4832秒
-- **PPS**: **10347.38** Parses Per Second
-- **平均延迟**: 0.0966ms/次
+- **总耗时**: 0.0932秒
+- **PPS**: **53673.21** Parses Per Second
+- **平均延迟**: 0.0186ms/次
 
 #### 测试2: 超大SQL解析 (1000万字符)
 - **SQL长度**: 10,500,998字符
-- **总耗时**: 0.5393秒
-- **CPS**: **19,472,920.75** Characters Per Second
+- **总耗时**: 0.2604秒
+- **CPS**: **40,330,466.27** Characters Per Second
 - **状态**: 解析成功
 
 #### 测试3: 仅 Python 四库对比（约 10M PostgreSQL SQL，不含 C 版本）
 
 基准脚本：`test/python_parsers_10m.py`
 
-| 解析器 | 平均耗时 | CPS |
-|--------|----------|-----|
-| **fastsqlparse** | 0.7394s | 13,524,892.44 |
-| pglast | 4.8541s | 2,060,217.57 |
-| sqlglot (postgres) | 20.5364s | 486,963.12 |
-| sqlparse | 84.9591s | 117,709.35 |
+| 解析器 | 平均耗时  | CPS           |
+|--------|-----------|---------------|
+| **fastsqlparse** | 0.2919s   | 34,259,660.59 |
+| pglast | 6.1841s   | 1,617,116.75  |
+| sqlglot (postgres) | 28.1496s  | 335,262.16    |
+| sqlparse | 102.4977s | 97,567.90     |
 
 说明：
 - SQL长度：10,000,484字符
-- 每个解析器运行次数：1
+- 每个解析器运行次数：3
 - 结果来源：result of `test/python_parsers_10m.py`
 
 ### 性能优势来源
