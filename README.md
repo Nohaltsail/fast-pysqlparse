@@ -59,7 +59,7 @@ Benchmark script: `test/python_parsers_10m.py`
 
 | Parser | Avg Time | CPS |
 |--------|----------|-----|
-| **fastsqlparse** | 0.7394s | 13,524,892.44 |
+| **fastsqlparse** | 0.2683s | 37,275,695.97 |
 | pglast | 4.8541s | 2,060,217.57 |
 | sqlglot (postgres) | 20.5364s | 486,963.12 |
 | sqlparse | 84.9591s | 117,709.35 |
