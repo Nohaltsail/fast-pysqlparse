@@ -24,11 +24,16 @@ class Token:
     at: int
 
 class DqlSourceExpr:
+    # A FROM-level source: .raw is the full source expression text as written.
     table: str
     alias: str
+    database: str
+    raw: str
 
 class DqlColumnExpr:
-    name: str
+    # Column expression from the SELECT list. NOTE: the column name attribute
+    # is `field` (not `name`); `alias` is the AS-alias (empty when absent).
+    field: str
     table: str
     alias: str
 
@@ -67,9 +72,12 @@ class Create(AbstractStatement): ...
 class WithStatement(AbstractStatement): ...
 
 class ParsedCTE:
+    # Accepts a WITH-clause fragment ("WITH a AS (...), b AS (...)"), NOT a full
+    # statement ("WITH ... SELECT ..."): pass full statements to ParsedQuery.
+    # Per-CTE names live on the ParsedCTE objects inside `units` (unit.name),
+    # not on this wrapper.
     raw: str
     units: List[Any]
-    name: Optional[str]
     def format(self, indent: str = ..., init_indent: int = ...) -> str: ...
     def ast(self) -> str: ...
     def tokens(self) -> List[Any]: ...
@@ -169,8 +177,20 @@ class Parsed:
     def tokens(self) -> List[Any]: ...
 
 # top-level convenience functions exposed by the package
-format: Any
-strip_comments: Any
+
+def format(sql: str, s_type: str, indent: str = ..., dialect: str = "ansi") -> str:
+    """
+    Format a single SQL statement.
+
+    `s_type` is required and selects the statement type:
+    "query" | "insert" | "update" | "delete" | "create" | "cte" | "view".
+    Unknown types raise RuntimeError.
+    """
+    ...
+
+def strip_comments(statement: str, dialect: str = "ansi") -> str: ...
+
+def tokenize(statement: str, dialect: DIALECT = DIALECT_ANSI) -> List[Tuple[str, str, int]]: ...
 
 def query(statement: str, name: str, pure: bool = ..., dialect: str = "ansi") -> Any: ...
 def insert(statement: str, pure: bool = ..., dialect: str = "ansi") -> Any: ...

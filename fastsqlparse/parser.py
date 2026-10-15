@@ -7,7 +7,8 @@ from fastsqlparse.conf import (
     DEFAULT_FORMAT_INDENT,
     DialectType,
     DIALECT_ANSI,
-    Dialects
+    Dialects,
+    check_dialect
 )
 
 
@@ -26,6 +27,7 @@ class ParsedOne(pysqlparser.ParsedOne):
         If the input SQL string contains multiple statements, only the first valid statement will be parsed.
     """
     def __init__(self, sql_statement, dialect=Dialects.ANSI.value):
+        check_dialect(dialect)
         super(ParsedOne, self).__init__(sql_statement, dialect)
 
     def ast(self):
@@ -84,6 +86,7 @@ class Parsed(pysqlparser.Parsed):
             pure=False,
             dialect=Dialects.ANSI.value
     ):
+        check_dialect(dialect)
         if not sql_statements and not file:
             raise Exception("empty SQL statement or file")
         elif not file:

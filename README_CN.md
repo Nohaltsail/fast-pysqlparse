@@ -1,7 +1,7 @@
 # fast-pysqlparse - 高性能SQL解析库
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.8-blue)]()
+[![Version](https://img.shields.io/badge/version-0.8.6-blue)]()
 [![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-purple)]()
 
@@ -661,9 +661,22 @@ ParsedQuery(position=138, name='test_table_1' at 0x2CD9765AF60)
 | DELETE语句 | `ParsedDelete`     | 提取删除条件 |
 | CREATE TABLE | `ParsedCreate`     | 提取表结构 |
 | CREATE VIEW | `ParsedView`       | 提取视图定义 |
-| CTE分析 | `ParsedCTE`        | 专门处理WITH子句 |
+| CTE分析（仅WITH片段） | `ParsedCTE`        | 专门处理WITH子句 |
 
 > **注意**: 如果SQL包含多个用分号分隔的语句（如脚本），**必须**使用`Parsed`。专用解析器仅适用于单个已知类型的语句。
+>
+> `ParsedCTE` 接受的是 **WITH 片段**（`WITH a AS (...), b AS (...)`），而不是完整语句。
+> 完整的 `WITH ... SELECT ...` 语句必须用 `ParsedQuery` 解析（用其 `.cte` / `.available_cte()` 查看 CTE）。
+
+### 行为细节说明
+
+- `ParsedQuery(...).parsed.sources` 仅包含**顶层 FROM 表**；仅出现在 SELECT 列表标量子查询中的表，
+  需通过 AST 的 `subquery` 字段或 `parse_dependence()` 获取。
+- `ParsedQuery.parse_dependence()` 返回的**血缘中 CTE 名不会被解析**：对
+  `WITH a AS (SELECT ...) SELECT * FROM a JOIN b`，返回 `{b, a}`，需要自行区分 CTE 名与物理表。
+- 顶层函数 `format(sql, s_type, ...)` 必须传语句类型：
+  `"query"`、`"insert"`、`"update"`、`"delete"`、`"create"`、`"cte"`、`"view"`。
+- 列对象的列名属性为 `.field`（`DqlColumnExpr.field`，不是 `.name`）。
 
 ### 典型应用场景
 
@@ -898,6 +911,9 @@ tokens = tokenize_insert("INSERT INTO ...")
 `dialect` 用于指定解析与词法分析的 SQL 方言（默认 `"ansi"`）。所有解析器构造函数接受字符串形式的 `dialect`；`tokenize` 类方法与 `ParsedQuery.parse_dependence` 接受 `DialectType`（默认 `DialectType.ANSI`）。
 
 支持的方言：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`（见 `fastsqlparse.conf` 中的 `Dialects` 枚举与 `DIALECT_*` 常量）。
+方言处理保持宽松设计：未知或空的方言名会回退到 `ansi`。Python 层在发生回退时会发出
+`UserWarning`（可通过 `fastsqlparse.check_dialect` / `fastsqlparse.SUPPORTED_DIALECTS`
+编程校验），拼写错误（如 `"postgre"`、`"MySQL"`）不再是完全静默；非字符串类型抛 `TypeError`。
 
 ```python
 from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType

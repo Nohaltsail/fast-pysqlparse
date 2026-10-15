@@ -12,7 +12,9 @@ from importlib import import_module
 from typing import Any
 from .conf import (
     Dialects,
-    DialectType
+    DialectType,
+    SUPPORTED_DIALECTS,
+    check_dialect
 )
 
 _pysqlparser: Any = import_module("fastsqlparse.pysqlparser")
@@ -21,7 +23,25 @@ format = _pysqlparser.format
 _strip_note = _pysqlparser.strip_note
 strip_comments = _strip_note
 
-tokenize: callable = ParsedAbstract.tokenize
+
+def tokenize(statement: str, dialect: DialectType = DialectType.ANSI):
+    """
+    Tokenize a single SQL statement, whatever its type.
+
+    Convenience wrapper around ``AbstractStatement.tokenize``. Unlike the raw
+    native function (whose pybind signature has no default), the dialect
+    argument is optional here and defaults to ``DialectType.ANSI``.
+
+    Args:
+        statement: SQL statement to tokenize.
+        dialect: ``DialectType`` enum, default ANSI.
+
+    Returns:
+        list of (token_value, token_type, position) tuples.
+    """
+    return ParsedAbstract.tokenize(statement, dialect)
+
+
 tokenize_query: callable = ParsedQuery.tokenize
 tokenize_insert: callable = ParsedInsert.tokenize
 tokenize_update: callable = ParsedUpdate.tokenize
@@ -52,5 +72,9 @@ __all__ = (
     "tokenize_update",
     "tokenize_delete",
     "tokenize_cte",
-    "tokenize_view"
+    "tokenize_view",
+    "Dialects",
+    "DialectType",
+    "SUPPORTED_DIALECTS",
+    "check_dialect"
 )

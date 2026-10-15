@@ -4,8 +4,8 @@ import fastsqlparse.pysqlparser as parser
 from fastsqlparse.conf import (
     DialectType,
     DIALECT_ANSI,
-    Dialects
-)
+    Dialects,
+    check_dialect)
 
 
 class ParsedUpdate(object):
@@ -58,6 +58,7 @@ class ParsedUpdate(object):
             SQLSyntaxError: If the input is not a valid UPDATE statement
         """
         self.dialect = dialect
+        check_dialect(dialect)  # warn on typos; native layer then falls back to ANSI
         self.__stmt__ = parser.update(statement, pure, dialect)
         for m in ParsedUpdate.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))

@@ -5,8 +5,8 @@ from fastsqlparse.conf import (
     DEFAULT_FORMAT_INDENT,
     DialectType,
     DIALECT_ANSI,
-    Dialects
-)
+    Dialects,
+    check_dialect)
 
 
 class ParsedInsert(object):
@@ -76,6 +76,7 @@ class ParsedInsert(object):
             SQLSyntaxError: For malformed INSERT statements
             ParserError: For unsupported INSERT variants
         """
+        check_dialect(dialect)  # warn on typos; native layer then falls back to ANSI
         self.__stmt__ = parser.insert(statement, pure, dialect)
         self.dialect = dialect
         for m in ParsedInsert.__callables__:

@@ -1,7 +1,7 @@
 # fast-pysqlparse: High-Performance SQL Parsing Library
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.8-blue)]()
+[![Version](https://img.shields.io/badge/version-0.8.6-blue)]()
 [![Language](https://img.shields.io/badge/language-Python%20%7C%20C++17-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-purple)]()
 
@@ -178,6 +178,13 @@ classmethods and `ParsedQuery.parse_dependence` accept a `DialectType`
 Supported dialects: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`
 (see the `Dialects` enum and the `DIALECT_*` constants in `fastsqlparse.conf`).
 
+Dialect handling is lenient by design: an unknown or empty dialect string falls
+back to `ansi` in the native parser. The Python boundary emits a `UserWarning`
+when this happens, so typos such as `"postgre"` or `"MySQL"` are visible instead
+of fully silent (use `fastsqlparse.check_dialect` /
+`fastsqlparse.SUPPORTED_DIALECTS` to check programmatically); non-string values
+raise `TypeError`.
+
 ```python
 from fastsqlparse import Parsed, ParsedQuery, Dialects, DialectType
 
@@ -185,6 +192,8 @@ parsed = Parsed(sql, dialect=Dialects.MYSQL.value)          # "mysql"
 query = ParsedQuery(sql, "q", dialect="postgresql")
 ParsedQuery.tokenize(sql, dialect=DialectType.MYSQL)        # typed DialectType
 ParsedQuery.parse_dependence(sql, dialect="mysql")
+
+ParsedQuery(sql, "q", dialect="postgre")  # UserWarning: falling back to 'ansi'
 ```
 
 ## When to Use Which Parser
@@ -199,9 +208,24 @@ ParsedQuery.parse_dependence(sql, dialect="mysql")
 | UPDATE statement | `ParsedUpdate`     |
 | CREATE TABLE statement | `ParsedCreate`     |
 | CREATE VIEW statement | `ParsedView`       |
-| CTE (WITH clause) statement | `ParsedCTE`        |
+| CTE (WITH clause) fragment only | `ParsedCTE` |
 
 > **Note:** If your SQL contains multiple statements separated by semicolons (e.g., a script with CREATE, INSERT, SELECT), you **must** use `Parsed`. The type-specific parsers are designed for single, known-type statements only.
+>
+> `ParsedCTE` accepts the **WITH-clause fragment** (`WITH a AS (...) , b AS (...)`) — not a full statement. A complete `WITH ... SELECT ...` statement must be parsed with `ParsedQuery` (use its `.cte` / `.available_cte()` to inspect the CTEs).
+
+## Behavior Notes
+
+- `ParsedQuery(...).parsed.sources` lists **top-level FROM tables only**. Tables that only
+  appear inside scalar subqueries of the SELECT list are found in the AST `subquery` field
+  and in `parse_dependence()` output.
+- `ParsedQuery.parse_dependence()` returns **CTE names unresolved**: for
+  `WITH a AS (SELECT ...) SELECT * FROM a JOIN b`, it returns `{b, a}`. Distinguish CTE
+  names from physical tables yourself if needed.
+- The top-level `format(sql, s_type, ...)` function requires a statement type:
+  `"query"`, `"insert"`, `"update"`, `"delete"`, `"create"`, `"cte"`, `"view"`.
+- Column objects expose the column name as `.field` (`DqlColumnExpr.field`, not `.name`).
+
 
 ## Documentation
 

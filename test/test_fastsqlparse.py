@@ -247,6 +247,63 @@ def test_scenario7_simple_full_ast():
     return ast_obj
 
 
+def test_scenario9_dialect_check():
+    """场景9（回归测试）：错传方言名发 UserWarning 并回退 ANSI；非字符串抛 TypeError"""
+    print("\n【场景9】方言宽松回退 + 警告（回归测试）")
+    print("-" * 80)
+
+    import warnings
+
+    for bad_dialect in ("not-a-dialect", "MySQL", "postgre", ""):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            q = ParsedQuery("SELECT * FROM t WHERE a = 1", "q", dialect=bad_dialect)
+            assert q.parsed is not None, "fallback parse failed"
+            assert any("Unknown SQL dialect" in str(w.message) for w in caught), \
+                f"dialect {bad_dialect!r}: no UserWarning emitted"
+        print(f"  OK: {bad_dialect!r} -> UserWarning + ANSI fallback, parse still succeeds")
+
+    # 合法方言不告警、正常解析
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        for good_dialect in ("ansi", "mysql", "postgresql", "sqlite", "doris"):
+            ParsedQuery("SELECT 1", "q", dialect=good_dialect)
+        assert not caught, "valid dialects must not warn"
+    print("  OK: all 5 supported dialects parse without warning")
+
+    # 非字符串类型必须抛 TypeError
+    try:
+        ParsedQuery("SELECT 1", "q", dialect=5)
+        raise AssertionError("non-str dialect accepted")
+    except TypeError:
+        pass
+    print("  OK: non-str dialect raises TypeError")
+
+    # parse_dependence / Parsed / ParsedOne 同样宽松回退 + 告警
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        ParsedQuery.parse_dependence("SELECT 1 FROM t", dialect="nope")
+        Parsed("SELECT 1", dialect="nope")
+        ParsedOne("SELECT 1", dialect="nope")
+        assert len(caught) == 3, f"expected 3 warnings, got {len(caught)}"
+    print("  OK: parse_dependence / Parsed / ParsedOne warn once each, still parse")
+
+
+def test_scenario10_tokenize_default_dialect():
+    """场景10（回归测试）：顶层 tokenize() 默认方言可用（与 .pyi 存根一致）"""
+    print("\n【场景10】顶层 tokenize 默认方言（回归测试）")
+    print("-" * 80)
+
+    import fastsqlparse
+
+    tokens = fastsqlparse.tokenize("SELECT 1")
+    assert tokens[0] == ("SELECT", "KEYWORD", 0), tokens
+    print(f"  OK: tokenize('SELECT 1') -> {tokens}")
+
+    tokens_mysql = fastsqlparse.tokenize("SELECT 1", DialectType.MYSQL)
+    assert tokens_mysql[0][0] == "SELECT"
+    print("  OK: tokenize(..., DialectType.MYSQL) works")
+
 def test_scenario8_dialects():
     """场景8：方言（dialect）参数演示"""
     print("\n【场景8】方言（dialect）参数演示")
@@ -822,6 +879,8 @@ def run_all_tests():
     test_scenario6_comments_and_formatting()
     test_scenario7_simple_full_ast()
     test_scenario8_dialects()
+    test_scenario9_dialect_check()
+    test_scenario10_tokenize_default_dialect()
 
     print("\n\n" + "=" * 80)
     print("二、性能验证")

@@ -4,8 +4,8 @@ import fastsqlparse.pysqlparser as parser
 from fastsqlparse.conf import (
     DialectType,
     DIALECT_ANSI,
-    Dialects
-)
+    Dialects,
+    check_dialect)
 
 
 class ParsedDelete(object):
@@ -48,6 +48,7 @@ class ParsedDelete(object):
             dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
         self.dialect = dialect
+        check_dialect(dialect)  # warn on typos; native layer then falls back to ANSI
         self.__stmt__ = parser.delete(statement, pure, dialect)
         for m in ParsedDelete.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))

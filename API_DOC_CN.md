@@ -203,7 +203,7 @@ for token_value, token_type, pos in tokens[:5]:
 **功能**: 解析WITH子句（CTE）
 
 **参数**:
-- `statement` (str): WITH语句
+- `statement` (str): WITH 片段，如 `WITH a AS (SELECT ...), b AS (SELECT ...)`；完整的 `WITH ... SELECT ...` 语句请改用 `ParsedQuery`
 - `pure` (bool, default=False): 控制 SQL 注释处理。`True` 会在解析前移除 `--` 与 `/* ... */` 注释，因此格式化结果和 tokens 不含注释，且解析可能更快；`False` 保留注释。
 - `dialect` (str, default=`"ansi"`): SQL 方言。支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`。可使用 `Dialects.<NAME>.value` 进行类型安全选择。
 
@@ -621,7 +621,7 @@ print(stripped)
 
 ### 方言（Dialects）
 
-解析器通过 `dialect` 参数（默认 `"ansi"`）支持多种 SQL 方言。所有解析器构造函数（`Parsed`、`ParsedOne`、`ParsedQuery`、`ParsedInsert`、`ParsedCTE`、`ParsedUpdate`、`ParsedDelete`、`ParsedView`、`ParsedCreate`）均接受字符串形式的 `dialect`；`tokenize(...)` 类方法与 `ParsedQuery.parse_dependence(...)` 接受 `DialectType` 类型的 `dialect`（默认 `DialectType.ANSI`）。
+解析器通过 `dialect` 参数（默认 `"ansi"`）支持多种 SQL 方言。未知或空的方言名会回退到 `ansi`（宽松设计），Python 层会发出 `UserWarning`；非字符串类型抛 `TypeError`（支持：`ansi`、`mysql`、`postgresql`、`sqlite`、`doris`）。
 
 支持的方言（通过 `Dialects` 枚举暴露，并由 `fastsqlparse` 重新导出）：
 
@@ -661,14 +661,16 @@ clean = strip_comments(sql)
 ```
 
 
-#### `format(sql: str, indent: str = "    ") -> str`
-格式化SQL语句
+#### `format(sql: str, s_type: str, indent: str = "    ", dialect: str = "ansi") -> str`
+格式化单条 SQL 语句。`s_type` 为**必填**参数，指定语句类型：
+`"query"`、`"insert"`、`"update"`、`"delete"`、`"create"`、`"cte"`（仅 WITH 片段）、`"view"`。
+未知类型会抛出 `RuntimeError`。
 
 ```python
 from fastsqlparse import format
 
 sql = "SELECT * FROM users WHERE id=1"
-formatted = format(sql, indent="  ")
+formatted = format(sql, "query", indent="  ")
 ```
 #### `tokenize(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
 词法分析
@@ -731,8 +733,8 @@ for token in tokens:
 
 | 类型 | 常见字段 | 说明 |
 |------|----------|------|
-| `DqlSourceExpr` | `table`, `alias` | FROM/JOIN 数据源表达式 |
-| `DqlColumnExpr` | `name`, `table`, `alias` | SELECT / 派生列元数据 |
+| `DqlSourceExpr` | `table`, `alias`, `database`, `raw` | FROM/JOIN 数据源表达式；`raw` 为原始数据源文本 |
+| `DqlColumnExpr` | `field`, `table`, `alias` | SELECT / 派生列元数据；列名属性为 `field`（不是 `name`） |
 | `DqlClause` | `part`, `clause` | 单个查询子句节点 |
 | `QueryStatement` | `T`, `sources`, `columns`, `clauses`, `subquery`, `clause_select` 或 `T`, `unions` | SELECT / UNION 解析结构 |
 | `CommonTableExpr` | `common_tables`, `expressions` | SELECT 级别 CTE 容器 |
@@ -777,7 +779,7 @@ print(json.dumps(full_ast, indent=2, ensure_ascii=False))
 - **单语句自动识别**: 使用 `ParsedOne` (推荐)
 - **已知SELECT**: 使用 `ParsedQuery`
 - **已知INSERT**: 使用 `ParsedInsert`
-- **仅CTE**: 使用 `ParsedCTE`
+- **仅CTE**: 使用 `ParsedCTE`——传入 WITH 片段（`WITH a AS (...)`）；完整的 `WITH ... SELECT ...` 语句需用 `ParsedQuery` 解析
 
 ### 2. 性能优化
 

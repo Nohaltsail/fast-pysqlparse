@@ -203,7 +203,8 @@ for token_value, token_type, pos in tokens[:5]:
 **Function**: Parse WITH clauses (CTE)
 
 **Parameters**:
-- `statement` (str): WITH statement
+- `statement` (str): WITH-clause fragment, e.g. `WITH a AS (SELECT ...), b AS (SELECT ...)`.
+  A full statement (`WITH ... SELECT ...`) must be parsed with `ParsedQuery` instead.
 - `pure` (bool, default=False): Controls SQL comment handling. `True` strips `--` and `/* ... */` comments before parsing, so formatted output and tokens exclude comments and parsing may be faster; `False` preserves comments.
 - `dialect` (str, default=`"ansi"`): SQL dialect. Supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`. Use `Dialects.<NAME>.value` for type-safe selection.
 
@@ -622,7 +623,10 @@ comment：
 
 ### Dialects
 
-The parser supports multiple SQL dialects via the `dialect` parameter (default `"ansi"`). Every parser constructor (`Parsed`, `ParsedOne`, `ParsedQuery`, `ParsedInsert`, `ParsedCTE`, `ParsedUpdate`, `ParsedDelete`, `ParsedView`, `ParsedCreate`) accepts `dialect` as a string; `tokenize(...)` classmethods and `ParsedQuery.parse_dependence(...)` accept `dialect` as a `DialectType` (default `DialectType.ANSI`).
+The parser supports multiple SQL dialects via the `dialect` parameter (default `"ansi"`).
+Unknown or empty dialect names fall back to `ansi` (lenient by design) and emit a
+`UserWarning` at the Python boundary; non-string values raise `TypeError`
+(supported: `ansi`, `mysql`, `postgresql`, `sqlite`, `doris`). Every parser constructor (`Parsed`, `ParsedOne`, `ParsedQuery`, `ParsedInsert`, `ParsedCTE`, `ParsedUpdate`, `ParsedDelete`, `ParsedView`, `ParsedCreate`) accepts `dialect` as a string; `tokenize(...)` classmethods and `ParsedQuery.parse_dependence(...)` accept `dialect` as a `DialectType` (default `DialectType.ANSI`).
 
 Supported dialects (exposed via the `Dialects` enum, re-exported from `fastsqlparse`):
 
@@ -662,14 +666,16 @@ clean = strip_comments(sql)
 ```
 
 
-#### `format(sql: str, indent: str = "    ") -> str`
-Format SQL statement
+#### `format(sql: str, s_type: str, indent: str = "    ", dialect: str = "ansi") -> str`
+Format a single SQL statement. `s_type` is **required** and selects the
+statement type: `"query"`, `"insert"`, `"update"`, `"delete"`, `"create"`,
+`"cte"` (WITH-fragment only), or `"view"`. Unknown types raise `RuntimeError`.
 
 ```python
 from fastsqlparse import format
 
 sql = "SELECT * FROM users WHERE id=1"
-formatted = format(sql, indent="  ")
+formatted = format(sql, "query", indent="  ")
 ```
 
 #### `tokenize(sql: str, dialect: DialectType = DialectType.ANSI) -> List[Tuple[str, str, int]]`
@@ -733,8 +739,8 @@ These names show up repeatedly in parser results and examples:
 
 | Type | Typical fields | Notes |
 |------|----------------|-------|
-| `DqlSourceExpr` | `table`, `alias` | FROM/JOIN source expression |
-| `DqlColumnExpr` | `name`, `table`, `alias` | SELECT / derived column metadata |
+| `DqlSourceExpr` | `table`, `alias`, `database`, `raw` | FROM/JOIN source expression; `raw` is the source text as written |
+| `DqlColumnExpr` | `field`, `table`, `alias` | SELECT / derived column metadata; note the column name attribute is `field` (not `name`) |
 | `DqlClause` | `part`, `clause` | Individual query clause node |
 | `QueryStatement` | `T`, `sources`, `columns`, `clauses`, `subquery`, `clause_select` or `T`, `unions` | Parsed SELECT or UNION structure |
 | `CommonTableExpr` | `common_tables`, `expressions` | SELECT-level CTE container |
@@ -779,7 +785,7 @@ print(json.dumps(full_ast, indent=2, ensure_ascii=False))
 - **Single statement auto-detect**: Use `ParsedOne` (recommended)
 - **Known SELECT**: Use `ParsedQuery`
 - **Known INSERT**: Use `ParsedInsert`
-- **CTE only**: Use `ParsedCTE`
+- **CTE only**: Use `ParsedCTE` — pass the WITH-clause fragment (`WITH a AS (...)`); a full `WITH ... SELECT ...` statement must go through `ParsedQuery`
 
 ### 2. Performance Optimization
 

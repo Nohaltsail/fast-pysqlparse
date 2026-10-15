@@ -4,8 +4,8 @@ from fastsqlparse.conf import (
     DEFAULT_FORMAT_INDENT,
     DialectType,
     DIALECT_ANSI,
-    Dialects
-)
+    Dialects,
+    check_dialect)
 
 
 class ParsedView(object):
@@ -53,6 +53,7 @@ class ParsedView(object):
             SQLSyntaxError: If input is not a valid CREATE VIEW statement
         """
         self.dialect = dialect
+        check_dialect(dialect)  # warn on typos; native layer then falls back to ANSI
         self.__stmt__ = parser.view(statement, pure, dialect)
         for m in ParsedView.__callables__:
             setattr(self, m, getattr(self.__stmt__, m))

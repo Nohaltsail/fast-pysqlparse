@@ -4,8 +4,8 @@ from fastsqlparse.conf import (
     DEFAULT_FORMAT_INDENT,
     DialectType,
     DIALECT_ANSI,
-    Dialects
-)
+    Dialects,
+    check_dialect)
 
 
 class ParsedQuery(object):
@@ -59,6 +59,7 @@ class ParsedQuery(object):
             pure (bool): Parse SQL without note
             dialect: default: ansi. support: mysql/postgresql/sqlite/doris
         """
+        check_dialect(dialect)  # warn on typos; native layer then falls back to ANSI
         self.__stmt__ = parser.query(statement, name, pure, dialect)
         self._columns = None
         self.__init_items(self.__stmt__)
@@ -97,6 +98,7 @@ class ParsedQuery(object):
         Returns:
             list: A list of dependencies.
         """
+        check_dialect(dialect)
         return parser.parse_dependence(statement, dialect)
 
     def format(self, indent: str = DEFAULT_FORMAT_INDENT * " ", init_indent: int = 0) -> str:
